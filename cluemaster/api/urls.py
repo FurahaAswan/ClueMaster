@@ -3,5 +3,6 @@ from . import views
 
 
 urlpatterns = [
-    path('', views.getData),
+    path('room/create', views.createRoom),
+    path('<str:room_id>', views.getRoom),
 ]

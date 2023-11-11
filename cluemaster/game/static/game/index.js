@@ -1,5 +1,6 @@
-const roomName = window.location.pathname;  // Replace with your dynamic room ID
-const socket = new WebSocket(`ws://${window.location.host}/ws/game${roomName}/`);
+const urlParams = new URLSearchParams(window.location.search);
+const roomId = urlParams.get('roomId');  // Replace with your dynamic room ID
+const socket = new WebSocket(`ws://${window.location.host}/ws/game/${roomId}/`);
 
 socket.onopen = function (event) {
     console.log('WebSocket connection opened:', event);

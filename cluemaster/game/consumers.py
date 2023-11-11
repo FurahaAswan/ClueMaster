@@ -6,7 +6,12 @@ from .models import Room, Player, Clue, Guess, Round
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
-        self.room_group_name = f"game_{self.room_id}"
+        self.room_group_name = f"room_{self.room_id}"
+
+        if not await self.get_room():
+            await self.accept()
+            await self.close()
+            return
 
         # Join room group
         await self.channel_layer.group_add(

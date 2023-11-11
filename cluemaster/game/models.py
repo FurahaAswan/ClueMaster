@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 import shortuuid
 
 class Room(models.Model):
-    id = models.CharField(primary_key=True, default=shortuuid.uuid, editable=False, max_length=22)
+    id = models.CharField(primary_key=True, default=shortuuid.uuid()[:7], editable=False, max_length=8)
     name = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     rounds = models.PositiveIntegerField()
@@ -12,8 +12,7 @@ class Room(models.Model):
     is_active = models.BooleanField(default=True)
 
 class Player(models.Model):
-    #user = models.OneToOneField(User, on_delete=models.CASCADE)
-    user = models.CharField(max_length=20)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     score = models.PositiveIntegerField(default=0)
 
 class Clue(models.Model):
