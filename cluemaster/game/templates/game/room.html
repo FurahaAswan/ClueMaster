@@ -8,8 +8,16 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <h1>Clue Master</h1>
-    <button type="button">Create Room</button>
-    <button type="button">Join Room</button>
+    chatroom
+	  <script type='text/javascript'>
+      let url = `ws://${window.location.host}/ws/socket-server/t/`
+
+      const chatSocket = new WebSocket(url)
+
+      chatSocket.onmessage = function(e){
+          let data = JSON.parse(e.data)
+          console.log('Data:', data)
+      }
+    </script>
   </body>
 </html>
