@@ -12,7 +12,8 @@ class Room(models.Model):
     is_active = models.BooleanField(default=True)
 
 class Player(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    #user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.CharField(max_length=20)
     score = models.PositiveIntegerField(default=0)
 
 class Clue(models.Model):
