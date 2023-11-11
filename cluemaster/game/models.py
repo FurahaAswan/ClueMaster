@@ -21,18 +21,12 @@ class Clue(models.Model):
     is_current = models.BooleanField(default=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
 
-class Guess(models.Model):
-    text = models.CharField(max_length=255)
-    is_correct = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    clue = models.ForeignKey(Clue, on_delete=models.CASCADE)
-
 class Round(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
     cluemaster = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='rounds_as_cluemaster')
     current_clue = models.OneToOneField(Clue, on_delete=models.CASCADE, null=True, blank=True)
+    word = models.CharField(max_length=255)
 
     def __str__(self):
         return f"Round in {self.room.name} with Cluemaster {self.cluemaster.user.username}"

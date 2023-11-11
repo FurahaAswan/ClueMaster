@@ -1,7 +1,8 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
-from .models import Room, Player, Clue, Guess, Round
+from .models import Room, Player, Clue, Round
+import asyncio
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -33,10 +34,14 @@ class GameConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         message_type = data['type']
 
+        print(data)
+
         if message_type == 'guess':
             await self.handle_guess(data['text'])
         elif message_type == 'chat_message':
             await self.handle_chat_message(data['text'])
+        elif message_type == "start_timer":
+            await self.handle_timer()
 
     # Handle player guess
     async def handle_guess(self, guess_text):
@@ -53,9 +58,6 @@ class GameConsumer(AsyncWebsocketConsumer):
                 player.score += 1
             else:
                 is_correct = False
-
-            # Save the guess
-            guess = Guess.objects.create(text=guess_text, is_correct=is_correct, player=player, clue=current_clue)
 
             # Broadcast the guess to the room
             await self.channel_layer.group_send(
@@ -84,6 +86,23 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }
             )
 
+    # Handle timer
+    async def handle_timer(self):
+        room = await self.get_room()
+
+        if room:
+            # Broadcast the initial timer value to the room
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'timer_update',
+                    'value': room.guess_time,
+                }
+            )
+
+            # Use a separate coroutine to update the timer
+            await self.update_timer(room.guess_time)
+
     # Send guess to room group
     async def guess(self, event):
         await self.send(text_data=json.dumps({
@@ -100,6 +119,26 @@ class GameConsumer(AsyncWebsocketConsumer):
             'text': event['text'],
             'player_username': event['player_username'],
         }))
+    
+    # Separate coroutine to update the timer
+    async def update_timer(self, time_remaining):
+        while time_remaining > 0:
+            # Broadcast the timer updates to the room
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'timer_update',
+                    'value': time_remaining,
+                }
+            )
+
+        # Sleep for 1 second before the next update
+        await asyncio.sleep(1)
+
+        # Decrement the time remaining
+        time_remaining -= 1
+       
+
 
     # Helper functions to get room, player, current round, and current clue
     @sync_to_async

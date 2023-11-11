@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-
-  <input type="text" id="chatInput" placeholder="Type your message">
-  <button onclick="sendWebSocketMessage('chat_message', document.getElementById('chatInput').value)">Send Chat</button>
-  <button onclick="sendWebSocketMessage('guess', 'The player's guess text')">Submit Guess</button>
+    <p id='timer'></p>
+    <button id='start'>Start</button>
+    <input type="text" id="guess" placeholder="Type your message">
+    <button id="send_guess">Submit Guess</button>
   </body>
   <script type='text/javascript' src={% static 'game/index.js'%}></script>
 </html>

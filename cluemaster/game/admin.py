@@ -5,5 +5,4 @@ from .models import *
 admin.site.register(Room)
 admin.site.register(Player)
 admin.site.register(Clue)
-admin.site.register(Guess)
 admin.site.register(Round)
