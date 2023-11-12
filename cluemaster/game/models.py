@@ -12,8 +12,10 @@ class Room(models.Model):
     is_active = models.BooleanField(default=True)
 
 class Player(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)
     score = models.PositiveIntegerField(default=0)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE)
+    
 
 class Clue(models.Model):
     text = models.CharField(max_length=255)
@@ -29,5 +31,5 @@ class Round(models.Model):
     word = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"Round in {self.room.name} with Cluemaster {self.cluemaster.user.username}"
+        return f"Round in {self.room.name} with Cluemaster {self.cluemaster.name}"
 

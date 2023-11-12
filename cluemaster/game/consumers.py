@@ -42,6 +42,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_chat_message(data['text'])
         elif message_type == "start_timer":
             await self.handle_timer()
+        elif message_type == 'join_room':
+            self.player_id = data['id']
+            await self.handle_join_room()
 
     # Handle player guess
     async def handle_guess(self, guess_text):
@@ -51,9 +54,9 @@ class GameConsumer(AsyncWebsocketConsumer):
         if room and player:
             # Check if the guess is correct
             current_round = await self.get_current_round(room)
-            current_clue = await self.get_current_clue(current_round)
+            current_word = current_round.word
 
-            if current_clue and guess_text.lower() == current_clue.text.lower():
+            if guess_text.lower() == current_word.lower():
                 is_correct = True
                 player.score += 1
             else:
@@ -65,7 +68,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'guess',
                     'text': guess_text,
-                    'player_username': player.user.username,
+                    'player_name': player.name,
                     'is_correct': is_correct,
                 }
             )
@@ -82,15 +85,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'chat_message',
                     'text': message_text,
-                    'player_username': player.user.username,
+                    'player_name': player.user.username,
                 }
             )
 
     # Handle timer
     async def handle_timer(self):
         room = await self.get_room()
+        player = await self.get_player()
 
-        if room:
+        if room and player:
             # Broadcast the initial timer value to the room
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -108,7 +112,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'guess',
             'text': event['text'],
-            'player_username': event['player_username'],
+            'player_name': event['player_name'],
             'is_correct': event['is_correct'],
         }))
 
@@ -117,7 +121,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
             'text': event['text'],
-            'player_username': event['player_username'],
+            'player_name': event['player_name'],
         }))
     
     # Separate coroutine to update the timer
@@ -137,7 +141,26 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         # Decrement the time remaining
         time_remaining -= 1
-       
+    
+    async def handle_join_room(self):
+        
+        player = await self.get_player()
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'player_join',
+                'name': player.name,
+                'id': player.id,
+            }
+        )
+    
+    async def player_join(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_join',
+            'name': event['name'],
+            'id': event['id'],
+        }))
 
 
     # Helper functions to get room, player, current round, and current clue
@@ -150,9 +173,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     @sync_to_async
     def get_player(self):
-        user = self.scope['user']
         try:
-            return Player.objects.get(user=user)
+            return Player.objects.get(id = self.player_id)
         except Player.DoesNotExist:
             return None
 

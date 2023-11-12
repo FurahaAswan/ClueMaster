@@ -2,12 +2,23 @@ const urlParams = new URLSearchParams(window.location.search);
 const room_id = urlParams.get('roomId');  // Replace with your dynamic room ID
   
 // Function to get a room
-async function getRoom(room_id) {
+async function joinRoom(room_id) {
     try {
       const apiUrl = `http://${window.location.host}/api/${room_id}`;
+
+      const name = document.getElementById('name').value;
   
       const response = await fetch(apiUrl, {
-        method: 'GET',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(
+          {
+            name: name
+          }
+        )
       });
   
       // Check if the response is successful
