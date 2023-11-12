@@ -33,7 +33,7 @@ const JoinGame = () => {
 
     return (
         <div>
-            <input id='name' type='text' placeholder='Please enter your name' value={name} onChange={(e) => setName(e.target.value)}/>
+            <input id='name' type='text' placeholder='Enter your name' value={name} onChange={(e) => setName(e.target.value)}/>
             <button onClick={joinRoom}>Play</button>
             <button onClick={createRoom}>Create Private Room</button>
         </div>

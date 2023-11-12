@@ -1,11 +1,12 @@
-import React, { useState } from 'react'
-import { useEffect, useContext, useRef } from 'react'
+import React, { useEffect, useContext, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { StateContext } from '../components/StateProvider';
+import '../styles/game.css';
 
 const PlayGame = () => {
 
     const { player, roomId } = useContext(StateContext);
+    const [timer, setTimer] = useState(0);
     const [guess, setGuess] = useState('')
     const navigate = useNavigate();
     const socketRef = useRef(null);
@@ -14,11 +15,11 @@ const PlayGame = () => {
         if (!player){
             navigate('/')
         }
-    })
+    }, [player])
 
     useEffect(() => {
           
-        socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/?playerI`)
+        socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/`)
         const socket = socketRef.current
 
         console.log('chatSocket: ', socket)
@@ -43,18 +44,14 @@ const PlayGame = () => {
             socket.close();
         };
         
-        }, []);
+    }, []);
 
         function handleWebSocketMessage(data) {
             // Handle different types of messages here
             if (data.type === 'guess') {
-                // Handle guess message
                 console.log('Received guess:', data);
-            } else if (data.type === 'chat_message') {
-            // Handle chat message
-            console.log('Received chat message:', data);
             } else if (data.type === 'timer_update') {
-            document.getElementById('timer').textContent = data.value
+                setTimer(data.value)
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
             }
@@ -74,13 +71,37 @@ const PlayGame = () => {
             }));
         }
 
+        let handleKeyDown = (e) => {
+            if (e.key === 'Enter') {
+                sendGuess();
+                setGuess('');
+            }
+        }
+
+        
+
 
     return (
-        <div>
-            <p id='timer'></p>
-            <button onClick={startTimer}>Start</button>
-            <input type="text" id="guess" placeholder="Type your message" value={guess} onChange={(e) => setGuess(e.target.value)}/>
-            <button id="send_guess" onClick={sendGuess}>Submit Guess</button>
+        <div className='game-container'>
+            <div className='header'>
+                <div className='left'>
+                    <h1 className='timer'>{timer}</h1>
+                    <h1 className='round-number'>Round #</h1>
+                </div>
+                <div className='middle'>
+                    <h1>_ _ _ _</h1>
+                </div>
+                <div className='right'></div>
+            </div>
+            <div className='clue-board'></div>
+            <div className='scoreboard'>
+                <div className='player'></div>
+            </div>
+            <div className='player-chat'>
+                <div className='user-input'>
+                    <input type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} onKeyDown={handleKeyDown}/>
+                </div>
+            </div>
         </div>
     )
 }

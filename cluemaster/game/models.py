@@ -29,6 +29,7 @@ class Round(models.Model):
     cluemaster = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='rounds_as_cluemaster')
     current_clue = models.OneToOneField(Clue, on_delete=models.CASCADE, null=True, blank=True)
     word = models.CharField(max_length=255)
+    time_left = models.IntegerField()
 
     def __str__(self):
         return f"Round in {self.room.name} with Cluemaster {self.cluemaster.name}"
