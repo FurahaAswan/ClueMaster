@@ -10,6 +10,8 @@ const PlayGame = () => {
     const [guess, setGuess] = useState('')
     const navigate = useNavigate();
     const socketRef = useRef(null);
+    const [chatlog, setChatLog] = useState([]);
+    const [wordToGuess, setWordToGuess] = useState("");
 
     useEffect(() => {
         if (!player){
@@ -18,8 +20,12 @@ const PlayGame = () => {
     }, [player])
 
     useEffect(() => {
+        console.log('Chat Log updated:', chatlog);
+    }, [chatlog]);
+
+    useEffect(() => {
           
-        socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/`)
+        socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/${player.id}`)
         const socket = socketRef.current
 
         console.log('chatSocket: ', socket)
@@ -31,45 +37,56 @@ const PlayGame = () => {
         
         socket.onopen = function (event) {
             console.log('WebSocket connection opened:', event);
-
-            socket.send(JSON.stringify({type: 'join_room', id: player.id}))
         };
         
         socket.onclose = function (event) {
             console.log('WebSocket connection closed:', event);
+            navigate('/');
         };
 
         // Clean up the WebSocket connection when the component unmounts
         return () => {
-            socket.close();
-        };
+            if (socket.readyState === 1) { // <-- This is important
+                socket.close();
+            }
+        }
         
-    }, []);
+    }, [roomId, player.id]);
 
         function handleWebSocketMessage(data) {
+            console.log('handle')
             // Handle different types of messages here
             if (data.type === 'guess') {
                 console.log('Received guess:', data);
+                setChatLog(prevChatLog => [...prevChatLog, data]);
             } else if (data.type === 'timer_update') {
                 setTimer(data.value)
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
+                setWordToGuess(data.word_to_guess);
+            } else if (data.type === 'player_list'){
+                console.log('Players', data)
             }
         }
 
-        function startTimer(){
-            socketRef.current.send(JSON.stringify({
-                'type': 'start_timer'
-            }));
+        function startTimer() {
+            if (socketRef.current.readyState === WebSocket.OPEN) {
+                socketRef.current.send(JSON.stringify({
+                    'type': 'start_timer'
+                }));
+            }
         }
-
-        function sendGuess(){
-            socketRef.current.send(JSON.stringify({
-                'type': 'guess',
-                'text': guess,
-                'player': player.id
-            }));
+        
+        function sendGuess() {
+            if (socketRef.current.readyState === WebSocket.OPEN) {
+                socketRef.current.send(JSON.stringify({
+                    'type': 'guess',
+                    'text': guess,
+                    'player': player.id
+                }));
+            }
         }
+        
 
         let handleKeyDown = (e) => {
             if (e.key === 'Enter') {
@@ -89,7 +106,7 @@ const PlayGame = () => {
                     <h1 className='round-number'>Round #</h1>
                 </div>
                 <div className='middle'>
-                    <h1>_ _ _ _</h1>
+                    <h1>{wordToGuess}</h1>
                 </div>
                 <div className='right'></div>
             </div>
@@ -98,6 +115,13 @@ const PlayGame = () => {
                 <div className='player'></div>
             </div>
             <div className='player-chat'>
+                {
+                    chatlog.map((message, index) => (
+                        <div key={index} className={index % 2 === 0 ? 'player-guess' : 'player-guess alt'}>
+                            <p><span className='name'>{message.player_name}:</span> {message.text}</p>
+                        </div>
+                    ))
+                }
                 <div className='user-input'>
                     <input type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} onKeyDown={handleKeyDown}/>
                 </div>

@@ -8,9 +8,13 @@ import asyncio
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
+        self.player_id = self.scope['url_route']['kwargs']['player_id']
         self.room_group_name = f"room_{self.room_id}"
 
-        if not await self.get_room():
+        room = await self.get_room()
+        player = await self.get_player()
+
+        if not (player and room):
             await self.accept()
             await self.close()
             return
@@ -23,12 +27,21 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
+        await self.handle_join_room()
+
     async def disconnect(self, close_code):
         # Leave room group
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
+
+        #Delete player from db
+        player = await self.get_player()
+        if player:
+            await database_sync_to_async(player.delete)()
+            print("delete player")
+
 
     # Receive message from WebSocket
     async def receive(self, text_data):
@@ -43,9 +56,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_chat_message(data['text'])
         elif message_type == "start_timer":
             await self.handle_timer()
-        elif message_type == 'join_room':
-            self.player_id = data['id']
-            await self.handle_join_room()
+            
 
     # Handle player guess
     async def handle_guess(self, guess_text):
@@ -147,6 +158,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         player = await self.get_player()
         current_clue = await self.get_current_clue(current_round)
 
+        word_to_guess = ''
+        for letter in current_round.word:
+            if letter is not ' ':
+                word_to_guess += '_ '
+            else:
+                word_to_guess += '  '
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -154,6 +172,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'name': player.name,
                 'id': player.id,
                 'current_clue': current_clue.text,
+                'word_to_guess': word_to_guess
             }
         )
 
@@ -165,6 +184,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'time': current_round.time_left,
                 }
             )
+        
+        # Broadcast the list of all players to the room
+        await self.broadcast_players()
             
     
     async def player_join(self, event):
@@ -173,6 +195,29 @@ class GameConsumer(AsyncWebsocketConsumer):
             'name': event['name'],
             'id': event['id'],
             'current_clue': event['current_clue'],
+            'word_to_guess': event['word_to_guess']
+        }))
+    
+    async def broadcast_players(self):
+        room = await self.get_room()
+
+        if room:
+            player_list = await self.get_all_players(room)
+
+            # Notify all clients in the room about the updated player list
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'player_list',
+                    'players': player_list,
+                }
+            )
+
+    # Add the player_list method to send the updated player list to clients
+    async def player_list(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_list',
+            'players': event['players'],
         }))
 
 
@@ -203,5 +248,16 @@ class GameConsumer(AsyncWebsocketConsumer):
         if current_round:
             return current_round.current_clue
         return None
+    
+    @sync_to_async
+    def get_all_players(self, room):
+        players =  Player.objects.filter(room=room)
+        player_list = []
+
+        for player in players:
+            player_list.append({'id': player.id, 'player_name': player.name})
+
+            return player_list
+                     
 
         
