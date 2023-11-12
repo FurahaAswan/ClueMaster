@@ -1,3 +1,53 @@
+@font-face {
+    font-family: 'Roboto';
+    src: url('fonts/roboto/Roboto-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: 'Roboto';
+    src: url('fonts/roboto/Roboto-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Roboto';
+    src: url('fonts/roboto/Roboto-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Roboto';
+    src: url('fonts/roboto/Roboto-Italic.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+  }
+  
+  @font-face {
+    font-family: 'Open Sans';
+    src: url('fonts/open-sans/static/OpenSans_Condensed-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Open Sans';
+    src: url('fonts/open-sans/static/OpenSans_Condensed-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Open Sans';
+    src: url('fonts/open-sans/static/OpenSans_Condensed-Italic.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+  }
+  
+
 * {
     padding: 0;
     margin: 0;
@@ -6,6 +56,7 @@
 
 body {
     background-color: rgb(192, 209, 235);
+    font-family: 'Roboto', sans-serif;
 }
 
 .game-container {
@@ -40,8 +91,6 @@ body {
     background-color: white;
     font-size: 25px;
     padding: 5px;
-    border-radius: 100%;
-    border: 1px solid black;
 }
 
 .header .middle {
@@ -55,6 +104,19 @@ body {
     grid-row: 2 / 3;
     grid-column: 1 / 2;
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+    display: flex;
+    flex-direction: column;
+}
+
+.player {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 0.01em solid #d0d0d0;
+}
+
+.scoreboard .player .score{
+    margin-right: 10px;
 }
 
 .clue-board{
@@ -63,6 +125,13 @@ body {
     grid-row: 2 / 3;
     grid-column: 2 / 3;
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.clue-board .clue{
+
 }
 
 .player-chat {

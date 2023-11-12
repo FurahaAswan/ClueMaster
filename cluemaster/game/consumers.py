@@ -62,10 +62,10 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_guess(self, guess_text):
         room = await self.get_room()
         player = await self.get_player()
+        current_round = await self.get_current_round(room)
 
-        if room and player:
+        if room and player and current_round:
             # Check if the guess is correct
-            current_round = await self.get_current_round(room)
             current_word = current_round.word
 
             if guess_text.lower() == current_word.lower():
@@ -157,34 +157,35 @@ class GameConsumer(AsyncWebsocketConsumer):
         room = await self.get_room()
         current_round = await self.get_current_round(room)
         player = await self.get_player()
-        current_clue = await self.get_current_clue(current_round)
+        clues = await self.get_clues(current_round)
 
-        word_to_guess = ''
-        for letter in current_round.word:
-            if letter != ' ':
-                word_to_guess += '_ '
-            else:
-                word_to_guess += '  '
+        if current_round:
+            word_to_guess = ''
+            for letter in current_round.word:
+                if letter != ' ':
+                    word_to_guess += '_ '
+                else:
+                    word_to_guess += '  '
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'player_join',
-                'name': player.name,
-                'id': player.id,
-                'current_clue': current_clue.text,
-                'word_to_guess': word_to_guess
-            }
-        )
-
-        if current_round.time_left < room.guess_time and current_round.time_left > 0:
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'update_timer',
-                    'time': current_round.time_left,
+                    'type': 'player_join',
+                    'name': player.name,
+                    'id': player.id,
+                    'clues': clues,
+                    'word_to_guess': word_to_guess
                 }
             )
+
+            if current_round.time_left < room.guess_time and current_round.time_left > 0:
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'update_timer',
+                        'time': current_round.time_left,
+                    }
+                )
         
         # Broadcast the list of all players to the room
         await self.broadcast_players()
@@ -195,7 +196,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'player_join',
             'name': event['name'],
             'id': event['id'],
-            'current_clue': event['current_clue'],
+            'clues': event['clues'],
             'word_to_guess': event['word_to_guess']
         }))
     
@@ -245,9 +246,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             return None
 
     @sync_to_async
-    def get_current_clue(self, current_round):
+    def get_clues(self, current_round):
         if current_round:
-            return current_round.current_clue
+            clues = Clue.objects.filter(game_round=current_round.id)
+            clues = [clue.text for clue in clues]
+            return clues
         return None
     
     @sync_to_async
@@ -256,9 +259,9 @@ class GameConsumer(AsyncWebsocketConsumer):
         player_list = []
 
         for player in players:
-            player_list.append({'id': player.id, 'player_name': player.name})
+            player_list.append({'id': player.id, 'player_name': player.name, 'score': player.score})
 
-            return player_list
+        return player_list
                      
 
         

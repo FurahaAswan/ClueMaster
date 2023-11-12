@@ -8,7 +8,9 @@ def createRoom(request):
     serializer = RoomSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-    return Response()
+        return Response(serializer.data, status=201)
+    print(serializer.errors)
+    return Response(serializer.errors, status=400)
 
 @api_view(['POST'])
 def joinRoom(request, room_id):

@@ -13,6 +13,7 @@ const PlayGame = () => {
     const [chatlog, setChatLog] = useState([]);
     const [wordToGuess, setWordToGuess] = useState("");
     const [players, setPlayers] = useState([]);
+    const [clues, setClues] = useState([]);
 
     useEffect(() => {
         if (!player){
@@ -64,6 +65,7 @@ const PlayGame = () => {
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
                 setWordToGuess(data.word_to_guess);
+                setClues(data.clues);
             } else if (data.type === 'player_list'){
                 console.log('player-list',data)
                 setPlayers(data.players);
@@ -96,9 +98,6 @@ const PlayGame = () => {
             }
         }
 
-        
-
-
     return (
         <div className='game-container'>
             <div className='header'>
@@ -111,11 +110,20 @@ const PlayGame = () => {
                 </div>
                 <div className='right'></div>
             </div>
-            <div className='clue-board'></div>
+            <div className='clue-board'>
+                {
+                    clues.map((clue, index) => (
+                        <h1 key={index} className='clue'>{index+1}. {clue}</h1>
+                    ))
+                }
+            </div>
             <div className='scoreboard'>
                 {
                     players.map((activePlayer, index) => (
-                        <div className='player' key={index}>{activePlayer.player_name}</div>
+                        <div className='player' key={index}>
+                            <h2>{activePlayer.id === player.id ? activePlayer.player_name+' (You)' : activePlayer.player_name}</h2>
+                            <h2 className='score'>{activePlayer.score}</h2>
+                        </div>
                     ))
                 }
             </div>

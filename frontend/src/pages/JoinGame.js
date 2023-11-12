@@ -2,6 +2,7 @@ import React, {useState, useContext, useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StateContext } from '../components/StateProvider';
 import axios from 'axios';
+import '../styles/join.css';
 
 const JoinGame = () => {
 
@@ -32,10 +33,15 @@ const JoinGame = () => {
     }
 
     return (
-        <div>
-            <input id='name' type='text' placeholder='Enter your name' value={name} onChange={(e) => setName(e.target.value)}/>
-            <button onClick={joinRoom}>Play</button>
-            <button onClick={createRoom}>Create Private Room</button>
+        <div className='container'>
+            <div className='join-container'>
+                <h1>Welcome to ClueMaster!</h1>
+                <div className='join-options'>
+                    <input className='item' id='name' type='text' placeholder='Enter your name' value={name} onChange={(e) => setName(e.target.value)}/>
+                    <button className='item play' onClick={joinRoom}>Play</button>
+                    <button className='item create' onClick={() => {return navigate('/create')}}>Create Private Room</button>
+                </div>
+            </div>
         </div>
     )
 }
