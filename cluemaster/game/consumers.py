@@ -88,6 +88,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     # Send guess to room group
     async def guess(self, event):
+        print('sending guess')
         await self.send(text_data=json.dumps({
             'type': 'guess',
             'text': event['text'],
@@ -160,7 +161,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         word_to_guess = ''
         for letter in current_round.word:
-            if letter is not ' ':
+            if letter != ' ':
                 word_to_guess += '_ '
             else:
                 word_to_guess += '  '

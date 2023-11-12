@@ -12,6 +12,7 @@ const PlayGame = () => {
     const socketRef = useRef(null);
     const [chatlog, setChatLog] = useState([]);
     const [wordToGuess, setWordToGuess] = useState("");
+    const [players, setPlayers] = useState([]);
 
     useEffect(() => {
         if (!player){
@@ -24,7 +25,6 @@ const PlayGame = () => {
     }, [chatlog]);
 
     useEffect(() => {
-          
         socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/${player.id}`)
         const socket = socketRef.current
 
@@ -65,7 +65,8 @@ const PlayGame = () => {
                 console.log('Player joined:', data);
                 setWordToGuess(data.word_to_guess);
             } else if (data.type === 'player_list'){
-                console.log('Players', data)
+                console.log('player-list',data)
+                setPlayers(data.players);
             }
         }
 
@@ -112,7 +113,11 @@ const PlayGame = () => {
             </div>
             <div className='clue-board'></div>
             <div className='scoreboard'>
-                <div className='player'></div>
+                {
+                    players.map((activePlayer, index) => (
+                        <div className='player' key={index}>{activePlayer.player_name}</div>
+                    ))
+                }
             </div>
             <div className='player-chat'>
                 {
