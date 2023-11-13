@@ -1,9 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
-import shortuuid
+from shortuuid.django_fields import ShortUUIDField
 
 class Room(models.Model):
-    id = models.CharField(primary_key=True, default=shortuuid.uuid()[:7], editable=False, max_length=8)
+    id = ShortUUIDField(
+        length=8,
+        max_length=40,
+        primary_key=True,
+    )
     name = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     rounds = models.PositiveIntegerField()
@@ -15,16 +19,17 @@ class Player(models.Model):
     name = models.CharField(max_length=50)
     score = models.PositiveIntegerField(default=0)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
+    is_host = models.BooleanField(default=False)
 
 class Round(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
-    cluemaster = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='rounds_as_cluemaster')
+    clue_master = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='rounds_as_cluemaster')
     word = models.CharField(max_length=255)
     time_left = models.IntegerField()
 
     def __str__(self):
-        return f"Round in {self.room.name} with Cluemaster {self.cluemaster.name}"
+        return f"Round in {self.room.name} with Cluemaster {self.clue_master.name}"
 
 class Clue(models.Model):
     text = models.CharField(max_length=255)

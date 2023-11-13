@@ -69,13 +69,16 @@ const PlayGame = () => {
             } else if (data.type === 'player_list'){
                 console.log('player-list',data)
                 setPlayers(data.players);
+            } else if (data.type === 'host_update') {
+                console.log('host-update',data);
+                setChatLog(prevChatLog => [...prevChatLog, data]);
             }
         }
 
-        function startTimer() {
+        function startRound() {
             if (socketRef.current.readyState === WebSocket.OPEN) {
                 socketRef.current.send(JSON.stringify({
-                    'type': 'start_timer'
+                    'type': 'start_round'
                 }));
             }
         }
@@ -116,6 +119,7 @@ const PlayGame = () => {
                         <h1 key={index} className='clue'>{index+1}. {clue}</h1>
                     ))
                 }
+                <button onClick={startRound}>Start</button>
             </div>
             <div className='scoreboard'>
                 {
@@ -130,8 +134,13 @@ const PlayGame = () => {
             <div className='player-chat'>
                 {
                     chatlog.map((message, index) => (
-                        <div key={index} className={index % 2 === 0 ? 'player-guess' : 'player-guess alt'}>
-                            <p><span className='name'>{message.player_name}:</span> {message.text}</p>
+                        message.type === 'guess' ?
+                            <div key={index} className={index % 2 === 0 ? 'player-guess' : 'player-guess alt'}>
+                                <p><span className='name'>{message.player_name}:</span> {message.text}</p>
+                            </div>
+                        :
+                        <div key={index} className={index % 2 === 0 ? 'update' : 'update alt-update'}>
+                            <p>{message.type === 'host_update' ? message.host.name + 'is the room host' : 'steve'}</p>
                         </div>
                     ))
                 }
