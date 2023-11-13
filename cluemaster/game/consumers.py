@@ -39,11 +39,15 @@ class GameConsumer(AsyncWebsocketConsumer):
         if player:
             await database_sync_to_async(player.delete)()
             if player.is_host and len(players) > 1:
-                await self.select_new_host()
+                await self.select_host()
 
         if len(players) == 1:
             await database_sync_to_async(room.delete)()
             await self.close()
+        elif len(players) > 1:
+            await self.update_game_state()
+        
+        
         
         # Leave room group
         await self.channel_layer.group_discard(
@@ -87,6 +91,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             room=room
         )
         
+        await self.update_game_state()
+
         await self.handle_timer()
 
         
@@ -97,15 +103,18 @@ class GameConsumer(AsyncWebsocketConsumer):
         player = await self.get_player()
         current_round = await self.get_current_round(room)
 
-        if room and player and current_round:
+        if room and player:
             # Check if the guess is correct
-            current_word = current_round.word
+            is_correct = False
 
-            if guess_text.lower() == current_word.lower():
-                is_correct = True
-                player.score += 1
-            else:
-                is_correct = False
+            if current_round:
+                current_word = current_round.word
+
+                if guess_text.lower() == current_word.lower():
+                    is_correct = True
+                    player.score += 1
+                else:
+                    is_correct = False
 
             # Broadcast the guess to the room
             await self.channel_layer.group_send(
@@ -136,7 +145,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         player = await self.get_player()
         current_round = await self.get_current_round(room)
 
-        if room and player:
+        if room and player and current_round:
             # Broadcast the initial timer value to the room
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -168,7 +177,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }
             ))
 
-        while time_remaining > 0:
+        while time_remaining >= 0:
             # Broadcast the timer updates to the room, including the new player
             await self.send(text_data=json.dumps(
                 {
@@ -176,6 +185,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'value': time_remaining,
                 }
             ))
+
+            if time_remaining == 0:
+                break
 
             # Sleep for 1 second before the next update
             await asyncio.sleep(1)
@@ -187,107 +199,93 @@ class GameConsumer(AsyncWebsocketConsumer):
         
     
     async def handle_join_room(self):
-        room = await self.get_room()
-        current_round = await self.get_current_round(room)
         player = await self.get_player()
-        clues = await self.get_clues(current_round)
+        print(player)
+
+        await self.update_game_state()
+        
+        await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'player_join',
+                    'id': player.id,
+                    'name': player.name
+                }
+            )   
+
+        await self.handle_timer()
+            
+    async def player_join(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_join',
+            'name': event['name'],
+            'id': event['id'],
+        }))
+
+    async def select_host(self):
+        print('Selecting new host')
+        room = await self.get_room()
+        players = await self.get_all_players(room)
+        player = await self.get_player()
         host = await self.get_host()
-
-        print('is_host: ', host)
-
+        
         if not host:
             player.is_host = True
             await database_sync_to_async(player.save)()
+        else: 
+            new_host = random.choice(players)
+            new_host = await database_sync_to_async(Player.objects.get)(id = new_host['id'])
+            new_host.is_host = True
+            await database_sync_to_async(new_host.save)()
 
+        await self.update_game_state()
+    
+    async def update_game_state(self):
+        room = await self.get_room()
+        player = await self.get_player()
+        current_round = await self.get_current_round(room)
+        clues = await self.get_clues(current_round)
+        host = await self.get_host()
+
+        word_to_guess = ''
         if current_round:
-            word_to_guess = ''
             for letter in current_round.word:
                 if letter != ' ':
                     word_to_guess += '_ '
                 else:
                     word_to_guess += '  '
 
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'player_join',
-                    'name': player.name,
-                    'id': player.id,
-                    'clues': clues,
-                    'word_to_guess': word_to_guess
-                }
-            )
-
-            if current_round.time_left < room.guess_time and current_round.time_left > 0:
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'update_timer',
-                        'time': current_round.time_left,
-                    }
-                )
-        
-        # Broadcast the list of all players to the room
-        await self.broadcast_players()
-            
-    
-    async def player_join(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'player_join',
-            'name': event['name'],
-            'id': event['id'],
-            'clues': event['clues'],
-            'word_to_guess': event['word_to_guess']
-        }))
-    
-    async def broadcast_players(self):
-        room = await self.get_room()
-
-        if room:
-            player_list = await self.get_all_players(room)
-
-            # Notify all clients in the room about the updated player list
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'player_list',
-                    'players': player_list,
-                }
-        )    
-
-
-    # Add the player_list method to send the updated player list to clients
-    async def player_list(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'player_list',
-            'players': event['players'],
-        }))
-
-    async def select_new_host(self):
-        print('Selecting new host')
-        room = await self.get_room()
-        players = await self.get_all_players(room)
-        
-        new_host = random.choice(players)
-        new_host = await database_sync_to_async(Player.objects.get)(id = new_host['id'])
-        new_host.is_host = True
-        await database_sync_to_async(new_host.save)()
-
-        print('before group add')
+        # Send the game state to the player
         await self.channel_layer.group_send(
                 self.room_group_name,
-            {
-                'type': 'host_update',
-                'host': {'id': new_host.id, 'name': new_host.name},
-            }
-        )
+        {
+            'type': 'game_state',
+            'player_name': player.name if player else None,
+            'player_id': player.id if player else None,
+            'is_host': player.is_host if player else False,
+            'round_active': current_round.is_active if current_round else False,
+            'word_to_guess': word_to_guess,
+            'clues': clues,
+            'players': await self.get_all_players(room),
+            'host': {'id': host.id, 'name': host.name} if host else None,
+            'timer': current_round.time_left if current_round else 0,
+        })
     
-    async def host_update(self, event):
-        print('host_update')
+    async def game_state(self, event):
+        # Send game state to the connected clients
         await self.send(text_data=json.dumps({
-            'type': 'host_update',
+            'type': 'game_state',
+            'player_name': event['player_name'],
+            'player_id': event['player_id'],
+            'is_host': event['is_host'],
+            'round_active': event['round_active'],
+            'word_to_guess': event['word_to_guess'],
+            'clues': event['clues'],
+            'players': event['players'],
             'host': event['host'],
+            'timer': event['timer'],
         }))
+
 
     # Helper functions to get room, player, current round, and current clue
     @database_sync_to_async
@@ -317,7 +315,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             clues = Clue.objects.filter(game_round=current_round.id)
             clues = [clue.text for clue in clues]
             return clues
-        return None
+        return []
     
     @database_sync_to_async
     def get_all_players(self, room):

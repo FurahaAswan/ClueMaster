@@ -2,6 +2,7 @@ import React, { useEffect, useContext, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { StateContext } from '../components/StateProvider';
 import '../styles/game.css';
+import clipboard from 'clipboard-copy';
 
 const PlayGame = () => {
 
@@ -64,14 +65,15 @@ const PlayGame = () => {
                 setTimer(data.value)
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
-                setWordToGuess(data.word_to_guess);
-                setClues(data.clues);
-            } else if (data.type === 'player_list'){
-                console.log('player-list',data)
-                setPlayers(data.players);
+                setChatLog(prevChatLog => [...prevChatLog, data]);
             } else if (data.type === 'host_update') {
                 console.log('host-update',data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
+            } else if (data.type === 'game_state'){
+                console.log('game_state', data)
+                setPlayers(data.players)
+                setClues(data.clues)
+                setWordToGuess(data.word_to_guess);
             }
         }
 
@@ -101,6 +103,10 @@ const PlayGame = () => {
             }
         }
 
+        function copyInviteLink() {
+            clipboard(window.location.host+`?roomId=${roomId}`);
+        }
+
     return (
         <div className='game-container'>
             <div className='header'>
@@ -111,7 +117,6 @@ const PlayGame = () => {
                 <div className='middle'>
                     <h1>{wordToGuess}</h1>
                 </div>
-                <div className='right'></div>
             </div>
             <div className='clue-board'>
                 {
@@ -120,6 +125,7 @@ const PlayGame = () => {
                     ))
                 }
                 <button onClick={startRound}>Start</button>
+                <button onClick={copyInviteLink}>Click to get Invite Link</button>
             </div>
             <div className='scoreboard'>
                 {
@@ -134,13 +140,16 @@ const PlayGame = () => {
             <div className='player-chat'>
                 {
                     chatlog.map((message, index) => (
-                        message.type === 'guess' ?
-                            <div key={index} className={index % 2 === 0 ? 'player-guess' : 'player-guess alt'}>
+                        <div key={index} className={index % 2 === 0 ? 'chat-message' : 'chat-message alt'}>
+                            {message.type === 'host_update' ? 
+                                <p className='host'>message.host.name + ' is the room host'</p> 
+                            : message.type === 'player_join' ? 
+                                <p className='join'> {message.name} joined the room!</p> 
+                            : message.type === 'guess' ? 
                                 <p><span className='name'>{message.player_name}:</span> {message.text}</p>
-                            </div>
-                        :
-                        <div key={index} className={index % 2 === 0 ? 'update' : 'update alt-update'}>
-                            <p>{message.type === 'host_update' ? message.host.name + 'is the room host' : 'steve'}</p>
+                            :
+                                <p>Unknown Message</p>
+                            }
                         </div>
                     ))
                 }

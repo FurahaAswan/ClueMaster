@@ -1,6 +1,6 @@
 // CreateRoomForm.js
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/create.css'; // Import the styles
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +19,13 @@ const CreateGame = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const [playerName, setPlayerName] = useState();
+
+  const [urlParams, setUrlParams] = useState(new URLSearchParams(window.location.search));
+    useEffect(() => {
+        setPlayerName(urlParams.get('playerName'));
+      }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -29,7 +36,7 @@ const CreateGame = () => {
       // Handle the response as needed
       console.log('Room created successfully:', response.data);
       
-      navigate(`/?roomId=${response.data.id}`)
+      navigate(`/?roomId=${response.data.id}&playerName=${playerName}`)
 
       // Optionally, you can redirect the user or perform other actions after room creation
     } catch (error) {
