@@ -84,7 +84,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_chat_message(data['text'])
         elif message_type == "start_game":
             await self.start_game()
-            #await self.handle_timer()
     
     async def start_game(self):
         #self.words = await bot.get_words(self.room.category, self.room.rounds)
@@ -92,13 +91,12 @@ class GameConsumer(AsyncWebsocketConsumer):
         #self.words = json.loads(self.words)
 
         print(self.words)
+        i = 1
 
         for word in self.words:
-            await asyncio.gather(
-                self.handle_round(word),
-                self.handle_timer(), 
-            )
-
+            print('Iteration', i)
+            await self.handle_round(word)
+            i += 1
 
     async def handle_round(self, word_to_guess):
         # Mark the current active round as inactive
@@ -117,44 +115,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         print('Current round', self.current_round)
 
         await self.update_game_state()
-        
-
-    # Handle player guess
-    async def handle_guess(self, guess_text):
-        if self.room and self.player:
-            # Check if the guess is correct
-            is_correct = False
-
-            if self.current_round:
-                current_word = self.current_round.word
-
-                if guess_text.lower() == current_word.lower():
-                    is_correct = True
-                    self.player.score += 1
-                else:
-                    is_correct = False
-
-            # Broadcast the guess to the room
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'guess',
-                    'text': guess_text,
-                    'player_name': self.player.name,
-                    'is_correct': is_correct,
-                    'id': self.player.id
-                }
-            )
-
-    # Send guess to room group
-    async def guess(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'guess',
-            'text': event['text'],
-            'player_name': event['player_name'],
-            'is_correct': event['is_correct'],
-            'id': event['id'],
-        }))
+        await self.handle_timer()
 
     # Handle timer
     async def handle_timer(self):
@@ -195,8 +156,44 @@ class GameConsumer(AsyncWebsocketConsumer):
             # Decrement the time remaining
             self.current_round.time_left -= 1
             await database_sync_to_async(self.current_round.save)()
-            time_remaining -= 1
-        
+            time_remaining -= 1      
+
+    # Handle player guess
+    async def handle_guess(self, guess_text):
+        if self.room and self.player:
+            # Check if the guess is correct
+            is_correct = False
+
+            if self.current_round:
+                current_word = self.current_round.word
+
+                if guess_text.lower() == current_word.lower():
+                    is_correct = True
+                    self.player.score += 1
+                else:
+                    is_correct = False
+
+            # Broadcast the guess to the room
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'guess',
+                    'text': guess_text,
+                    'player_name': self.player.name,
+                    'is_correct': is_correct,
+                    'id': self.player.id
+                }
+            )
+
+    # Send guess to room group
+    async def guess(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'guess',
+            'text': event['text'],
+            'player_name': event['player_name'],
+            'is_correct': event['is_correct'],
+            'id': event['id'],
+        }))  
     
     async def handle_join_room(self):
         player = await self.get_player()
