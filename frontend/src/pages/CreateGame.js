@@ -1,16 +1,16 @@
-// CreateRoomForm.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../styles/create.css'; // Import the styles
+import '../styles/create.css';
 import { useNavigate } from 'react-router-dom';
 
 const CreateGame = () => {
   const [formData, setFormData] = useState({
     name: '',
-    rounds: 0,
-    guess_Time: 0,
-    max_players: 0,
+    rounds: 2,
+    guess_time: 20,
+    max_players: 2,
+    category: '', // Add category field
+    difficulty: 'easy', // Add difficulty field with default value
   });
 
   const navigate = useNavigate();
@@ -22,50 +22,73 @@ const CreateGame = () => {
   const [playerName, setPlayerName] = useState();
 
   const [urlParams, setUrlParams] = useState(new URLSearchParams(window.location.search));
-    useEffect(() => {
-        setPlayerName(urlParams.get('playerName'));
-      }, []);
+  useEffect(() => {
+    setPlayerName(urlParams.get('playerName'));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      // Make a POST request to create a new room
+      console.log('Form Data', formData)
       const response = await axios.post('http://localhost:8000/api/room/create/', formData);
-
-      // Handle the response as needed
       console.log('Room created successfully:', response.data);
-      
-      navigate(`/?roomId=${response.data.id}&playerName=${playerName}`)
 
-      // Optionally, you can redirect the user or perform other actions after room creation
+      navigate(`/?roomId=${response.data.id}&playerName=${playerName}`);
     } catch (error) {
       console.error('Error creating room:', error);
-      // Handle errors as needed
     }
+  };
+
+  const generateOptions = (min, max, interval) => {
+    const options = [];
+    for (let i = min; i <= max; i += interval) {
+      options.push(<option key={i} value={i}>{i}</option>);
+    }
+    return options;
   };
 
   return (
     <div className='container'>
-        <form className='formContainer' onSubmit={handleSubmit}>
+      <form className='formContainer' onSubmit={handleSubmit}>
         <label className='label'>
-            Room Name:
-            <input type="text" name="name" value={formData.name} onChange={handleChange} className='inputField' required />
+          Room Name:
+          <input type="text" name="name" value={formData.name} onChange={handleChange} className='inputField' required />
         </label>
         <label className='label'>
-            Rounds:
-            <input type="number" name="rounds" value={formData.rounds} onChange={handleChange} className='inputField' required />
+          Rounds:
+          <select name="rounds" value={formData.rounds} onChange={handleChange} className='inputField' required>
+            {generateOptions(2,10,1)}
+          </select>
         </label>
         <label className='label'>
-            Guess Time:
-            <input type="number" name="guess_time" value={formData.guess_time} onChange={handleChange} className='inputField' required />
+          Guess Time:
+          <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='inputField' required>
+            {generateOptions(20,200,10)}
+          </select>
         </label>
         <label className='label'>
-            Max Players:
-            <input type="number" name="max_players" value={formData.max_players} onChange={handleChange} className='inputField' required />
+          Max Players:
+          <select name="max_players" value={formData.max_players} onChange={handleChange} className='inputField' required>
+            {generateOptions(2,20,1)}
+          </select>
+        </label>
+        {/* Add category field */}
+        <label className='label'>
+          Category:
+          <input type="text" name="category" value={formData.category} onChange={handleChange} className='inputField' required />
+        </label>
+        {/* Add difficulty field */}
+        <label className='label'>
+          Difficulty:
+          <select name="difficulty" value={formData.difficulty} onChange={handleChange} className='inputField' required>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
         </label>
         <button type="submit" className='button'>Create Room</button>
-        </form>
+      </form>
     </div>
   );
 };

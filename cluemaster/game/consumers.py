@@ -5,6 +5,8 @@ from channels.db import database_sync_to_async
 from .models import Room, Player, Clue, Round
 import asyncio
 import random
+import bot.bot as bot
+
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -12,10 +14,14 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.player_id = self.scope['url_route']['kwargs']['player_id']
         self.room_group_name = f"room_{self.room_id}"
 
-        room = await self.get_room()
-        player = await self.get_player()
+        self.room = await self.get_room()
+        self.player = await self.get_player()
+        self.host = await self.get_host()
+        self.players = await self.get_all_players()
+        self.current_round = await self.get_current_round()
+        self.clues = await self.get_clues()
 
-        if not (player and room):
+        if not (self.player and self.room):
             await self.accept()
             await self.close()
             return
@@ -30,24 +36,26 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await self.handle_join_room()
 
-    async def disconnect(self, close_code):
-        room = await self.get_room()
-        players = await self.get_all_players(room)
+        if not self.host:
+            await self.select_host()
 
+    async def disconnect(self, close_code):
         #Delete player from db
-        player = await self.get_player()
-        if player:
-            await database_sync_to_async(player.delete)()
-            if player.is_host and len(players) > 1:
+        if self.player:
+            await database_sync_to_async(self.player.delete)()
+            if self.player.is_host and len(self.players) > 1:
                 await self.select_host()
 
-        if len(players) == 1:
-            await database_sync_to_async(room.delete)()
+        if len(self.players) == 1:
+            await database_sync_to_async(self.room.delete)()
             await self.close()
-        elif len(players) > 1:
+        elif len(self.players) > 1:
             await self.update_game_state()
-        
-        
+            await self.channel_layer.group_send(
+            self.room_group_name, {
+                'type': 'player_leave',
+                'name': self.player.name
+            })
         
         # Leave room group
         await self.channel_layer.group_discard(
@@ -55,7 +63,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
-
+    async def player_leave(self, event):
+        # Send game state to the connected clients
+        await self.send(text_data=json.dumps({
+            'type': 'player_leave',
+            'name': event['name']
+        }))
 
 
     # Receive message from WebSocket
@@ -69,50 +82,55 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_guess(data['text'])
         elif message_type == 'chat_message':
             await self.handle_chat_message(data['text'])
-        elif message_type == "start_round":
-            await self.handle_round()
+        elif message_type == "start_game":
+            await self.start_game()
             #await self.handle_timer()
     
-    async def handle_round(self):
-        room = await self.get_room()
-        player = await self.get_player()
-        current_round = await self.get_current_round(room)
-        
+    async def start_game(self):
+        #self.words = await bot.get_words(self.room.category, self.room.rounds)
+        self.words = ['worxd' for round in range(self.room.rounds)]
+        #self.words = json.loads(self.words)
+
+        print(self.words)
+
+        for word in self.words:
+            await asyncio.gather(
+                self.handle_round(word),
+                self.handle_timer(), 
+            )
+
+
+    async def handle_round(self, word_to_guess):
         # Mark the current active round as inactive
-        if current_round:
-            current_round.is_active = False
-            await database_sync_to_async(current_round.save)()
+        if self.current_round:
+            self.current_round.is_active = False
+            await database_sync_to_async(self.current_round.save)()
 
         # Create a new round
         await database_sync_to_async(Round.objects.create)(
-            word='Word', 
-            time_left=room.guess_time, 
-            clue_master=player, 
-            room=room
+            word=word_to_guess, 
+            time_left=self.room.guess_time, 
+            room=self.room,
         )
         
+        self.current_round = await self.get_current_round()
+        print('Current round', self.current_round)
+
         await self.update_game_state()
-
-        await self.handle_timer()
-
         
 
     # Handle player guess
     async def handle_guess(self, guess_text):
-        room = await self.get_room()
-        player = await self.get_player()
-        current_round = await self.get_current_round(room)
-
-        if room and player:
+        if self.room and self.player:
             # Check if the guess is correct
             is_correct = False
 
-            if current_round:
-                current_word = current_round.word
+            if self.current_round:
+                current_word = self.current_round.word
 
                 if guess_text.lower() == current_word.lower():
                     is_correct = True
-                    player.score += 1
+                    self.player.score += 1
                 else:
                     is_correct = False
 
@@ -122,15 +140,14 @@ class GameConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'guess',
                     'text': guess_text,
-                    'player_name': player.name,
+                    'player_name': self.player.name,
                     'is_correct': is_correct,
-                    'id': player.id
+                    'id': self.player.id
                 }
             )
 
     # Send guess to room group
     async def guess(self, event):
-        print('sending guess')
         await self.send(text_data=json.dumps({
             'type': 'guess',
             'text': event['text'],
@@ -141,41 +158,24 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     # Handle timer
     async def handle_timer(self):
-        room = await self.get_room()
-        player = await self.get_player()
-        current_round = await self.get_current_round(room)
-
-        if room and player and current_round:
+        print('handle_timer')
+        if self.room and self.player and self.current_round:
             # Broadcast the initial timer value to the room
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'update_timer',
-                    'time': current_round.time_left,
-                    'start_timer': True,  # Add a flag to indicate starting the timer
+                    'time': self.current_round.time_left,
                 }
             )
     
     async def update_timer(self,event):
+       print('update_timer')
        asyncio.ensure_future(self.update_timer_helper(event))
 
     # Separate coroutine to update the timer
     async def update_timer_helper(self, event):
-        room = await self.get_room()
-        current_round = await self.get_current_round(room)
-
-        time_remaining = current_round.time_left
-
-        start_timer = event.get('start_timer', False)
-
-        if start_timer:
-            # If the timer is starting, send the initial timer value to the player
-            await self.send(text_data=json.dumps(
-                {
-                    'type': 'timer_update',
-                    'value': time_remaining,
-                }
-            ))
+        time_remaining = self.current_round.time_left
 
         while time_remaining >= 0:
             # Broadcast the timer updates to the room, including the new player
@@ -193,14 +193,13 @@ class GameConsumer(AsyncWebsocketConsumer):
             await asyncio.sleep(1)
 
             # Decrement the time remaining
-            current_round.time_left -= 1
-            await database_sync_to_async(current_round.save)()
+            self.current_round.time_left -= 1
+            await database_sync_to_async(self.current_round.save)()
             time_remaining -= 1
         
     
     async def handle_join_room(self):
         player = await self.get_player()
-        print(player)
 
         await self.update_game_state()
         
@@ -208,8 +207,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 {
                     'type': 'player_join',
-                    'id': player.id,
-                    'name': player.name
+                    'id': self.player.id,
+                    'name': self.player.name
                 }
             )   
 
@@ -223,33 +222,22 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
 
     async def select_host(self):
-        print('Selecting new host')
-        room = await self.get_room()
-        players = await self.get_all_players(room)
-        player = await self.get_player()
-        host = await self.get_host()
-        
-        if not host:
-            player.is_host = True
-            await database_sync_to_async(player.save)()
-        else: 
-            new_host = random.choice(players)
-            new_host = await database_sync_to_async(Player.objects.get)(id = new_host['id'])
-            new_host.is_host = True
-            await database_sync_to_async(new_host.save)()
+        print('Selecting new host')   
+        new_host = random.choice(self.players)
+        new_host = await database_sync_to_async(Player.objects.get)(id = new_host['id'])
+        new_host.is_host = True
+        await database_sync_to_async(new_host.save)()
 
         await self.update_game_state()
     
     async def update_game_state(self):
-        room = await self.get_room()
-        player = await self.get_player()
-        current_round = await self.get_current_round(room)
-        clues = await self.get_clues(current_round)
-        host = await self.get_host()
+        self.host = await self.get_host()
+        self.players = await self.get_all_players()
+        self.current_round = await self.get_current_round()
 
         word_to_guess = ''
-        if current_round:
-            for letter in current_round.word:
+        if self.current_round:
+            for letter in self.current_round.word:
                 if letter != ' ':
                     word_to_guess += '_ '
                 else:
@@ -260,15 +248,15 @@ class GameConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
         {
             'type': 'game_state',
-            'player_name': player.name if player else None,
-            'player_id': player.id if player else None,
-            'is_host': player.is_host if player else False,
-            'round_active': current_round.is_active if current_round else False,
+            'player_name': self.player.name if self.player else None,
+            'player_id': self.player.id if self.player else None,
+            'is_host': self.player.is_host if self.player else False,
+            'round_active': self.current_round.is_active if self.current_round else False,
             'word_to_guess': word_to_guess,
-            'clues': clues,
-            'players': await self.get_all_players(room),
-            'host': {'id': host.id, 'name': host.name} if host else None,
-            'timer': current_round.time_left if current_round else 0,
+            'clues': self.clues,
+            'players': await self.get_all_players(),
+            'host': {'id': self.host.id, 'name': self.host.name} if self.host else None,
+            'timer': self.current_round.time_left if self.current_round else 0,
         })
     
     async def game_state(self, event):
@@ -303,24 +291,27 @@ class GameConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def get_current_round(self, room):
+    def get_current_round(self):
         try:
-            return Round.objects.get(room=room, is_active=True)
+            return Round.objects.get(room=self.room, is_active=True)
         except Round.DoesNotExist:
             return None
 
     @database_sync_to_async
-    def get_clues(self, current_round):
-        if current_round:
-            clues = Clue.objects.filter(game_round=current_round.id)
-            clues = [clue.text for clue in clues]
-            return clues
-        return []
+    def get_clues(self):
+        try:
+            if self.current_round:
+                clues = Clue.objects.filter(game_round=self.current_round.id)
+                clues = [clue.text for clue in clues]
+                return clues
+            return []
+        except Clue.DoesNotExist:
+            return []
     
     @database_sync_to_async
-    def get_all_players(self, room):
+    def get_all_players(self):
         try:
-            players =  Player.objects.filter(room=room)
+            players =  Player.objects.filter(room=self.room)
             player_list = []
 
             for player in players:
@@ -333,7 +324,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_host(self):
         try:
-            room = self.get_room()
+            room = Room.objects.get(id=self.room_id)
             return Player.objects.get(room=room, is_host=True)
         except Player.DoesNotExist:
             return None

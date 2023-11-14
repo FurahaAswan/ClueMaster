@@ -67,20 +67,22 @@ const PlayGame = () => {
                 console.log('Player joined:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
             } else if (data.type === 'host_update') {
-                console.log('host-update',data);
+                console.log('host_update',data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
             } else if (data.type === 'game_state'){
                 console.log('game_state', data)
                 setPlayers(data.players)
                 setClues(data.clues)
                 setWordToGuess(data.word_to_guess);
+            } else if (data.type === 'player_leave') {
+                setChatLog(prevChatLog => [...prevChatLog, data]);
             }
         }
 
         function startRound() {
             if (socketRef.current.readyState === WebSocket.OPEN) {
                 socketRef.current.send(JSON.stringify({
-                    'type': 'start_round'
+                    'type': 'start_game'
                 }));
             }
         }
@@ -131,8 +133,8 @@ const PlayGame = () => {
                 {
                     players.map((activePlayer, index) => (
                         <div className='player' key={index}>
-                            <h2>{activePlayer.id === player.id ? activePlayer.player_name+' (You)' : activePlayer.player_name}</h2>
-                            <h2 className='score'>{activePlayer.score}</h2>
+                            <h1>{activePlayer.id === player.id ? activePlayer.player_name+' (You)' : activePlayer.player_name}</h1>
+                            <h1 className='score'>{activePlayer.score}</h1>
                         </div>
                     ))
                 }
@@ -147,6 +149,8 @@ const PlayGame = () => {
                                 <p className='join'> {message.name} joined the room!</p> 
                             : message.type === 'guess' ? 
                                 <p><span className='name'>{message.player_name}:</span> {message.text}</p>
+                            : message.type === 'player_leave' ? 
+                                <p className='leave'>{message.name} left the room</p>
                             :
                                 <p>Unknown Message</p>
                             }

@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from shortuuid.django_fields import ShortUUIDField
+from channels.db import database_sync_to_async
 
 class Room(models.Model):
     id = ShortUUIDField(
@@ -14,6 +15,19 @@ class Room(models.Model):
     guess_time = models.PositiveIntegerField()
     max_players = models.PositiveIntegerField()
     is_active = models.BooleanField(default=True)
+    category = models.CharField(max_length=50)
+
+    EASY = 'easy'
+    MEDIUM = 'medium'
+    HARD = 'hard'
+
+    DIFFICULTY_CHOICES = (
+        (EASY, 'Easy'),
+        (MEDIUM, 'Medium'),
+        (HARD, 'Hard'), 
+    )
+
+    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="easy")
 
 class Player(models.Model):
     name = models.CharField(max_length=50)
@@ -24,12 +38,14 @@ class Player(models.Model):
 class Round(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
-    clue_master = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='rounds_as_cluemaster')
     word = models.CharField(max_length=255)
     time_left = models.IntegerField()
 
+    async def get_room(self):
+        return await database_sync_to_async(lambda: self.room.id)()
+
     def __str__(self):
-        return f"Round in {self.room.name} with Cluemaster {self.clue_master.name}"
+        return f"Round in {self.get_room()}"
 
 class Clue(models.Model):
     text = models.CharField(max_length=255)

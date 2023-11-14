@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'game',
     'rest_framework',
     'corsheaders',
+    'bot',
 ]
 
 MIDDLEWARE = [
