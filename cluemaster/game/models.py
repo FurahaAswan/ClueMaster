@@ -34,6 +34,7 @@ class Player(models.Model):
     score = models.PositiveIntegerField(default=0)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     is_host = models.BooleanField(default=False)
+    is_correct = models.BooleanField(default=False)
 
 class Round(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)

@@ -7,7 +7,7 @@ const CreateGame = () => {
   const [formData, setFormData] = useState({
     name: '',
     rounds: 2,
-    guess_time: 20,
+    guess_time: 60,
     max_players: 2,
     category: '', // Add category field
     difficulty: 'easy', // Add difficulty field with default value
@@ -64,7 +64,7 @@ const CreateGame = () => {
         <label className='label'>
           Guess Time:
           <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='inputField' required>
-            {generateOptions(20,200,10)}
+            {generateOptions(60,200,10)}
           </select>
         </label>
         <label className='label'>

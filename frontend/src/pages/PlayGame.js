@@ -15,6 +15,7 @@ const PlayGame = () => {
     const [wordToGuess, setWordToGuess] = useState("");
     const [players, setPlayers] = useState([]);
     const [clues, setClues] = useState([]);
+    const [host, setHost] = useState();
 
     useEffect(() => {
         if (!player){
@@ -74,6 +75,8 @@ const PlayGame = () => {
                 setPlayers(data.players)
                 setClues(data.clues)
                 setWordToGuess(data.word_to_guess);
+                setHost(data.host); // Ensure that 'host' is not null
+                setTimer(data.timer);
             } else if (data.type === 'player_leave') {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
             }
@@ -126,8 +129,10 @@ const PlayGame = () => {
                         <h1 key={index} className='clue'>{index+1}. {clue}</h1>
                     ))
                 }
-                <button onClick={startRound}>Start</button>
-                <button onClick={copyInviteLink}>Click to get Invite Link</button>
+                <div className={host && player && host.id === player.id ? 'options' : 'hide'}>
+                    <button className='link' onClick={copyInviteLink}>Click to get Invite Link</button>
+                    <button className='start' onClick={startRound}>Start</button>
+                </div>
             </div>
             <div className='scoreboard'>
                 {
