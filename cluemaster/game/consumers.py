@@ -68,6 +68,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         if len(self.players) == 1:
             await database_sync_to_async(self.room.delete)()
+            if self.game:
+                self.game.cancel()
             await self.close()
         elif len(self.players) > 1:
             await self.update_game_state()
@@ -106,7 +108,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.start_game()
     
     async def start_game(self):
-        asyncio.ensure_future(self.game_loop())
+        self.game = asyncio.ensure_future(self.game_loop())
         
     
     async def game_loop(self):
@@ -116,10 +118,14 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         #words = ["exampleword", "Lebron James", "Fish"]
         words = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
-        words = json.loads(words)
         print('Words: ', words)
-        words = words['words']
-        #clues = ['Clue 1', 'Clue 2', 'Clue 3']
+        words = json.loads(words)
+        words_data = words['words']
+        words = []
+        for i in range(self.room.rounds):
+            random_word = random.choice(words_data)
+            if random_word not in words:
+                words.append(random_word)
 
         for i in range(self.room.rounds):
             clues = await bot.get_clues(words[i], self.room.category, self.room.difficulty)
