@@ -114,10 +114,18 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not self.host or self.host.id != self.player.id:
             return
         
-        words = ["exampleword", "Lebron James", "Fish"]
-        clues = ['Clue 1', 'Clue 2', 'Clue 3']
+        #words = ["exampleword", "Lebron James", "Fish"]
+        words = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
+        words = json.loads(words)
+        print('Words: ', words)
+        words = words['words']
+        #clues = ['Clue 1', 'Clue 2', 'Clue 3']
 
         for i in range(self.room.rounds):
+            clues = await bot.get_clues(words[i], self.room.category, self.room.difficulty)
+            clues = json.loads(clues)
+            clues = clues['clues']
+            print(f'Clues for {words[i]}: ', clues)
             # Generate a random word or retrieve it from an external source
             word_to_guess = words[i]  # Replace this with your word generation logic
 
