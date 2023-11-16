@@ -24,7 +24,7 @@ async def get_words(category, length, difficulty):
     messages = [
         {"role": "system", "content": f"""
          You are a game moderator for ClueMaster, a multiplayer online guessing game where players compete to guess a word or phrase based on progressively more specific clues. 
-         Based off the following trivia topic and difficulty, you will generate a list of 30 trivia answers. Be sure to strictly adhere to the difficulty and taylor 
+         Based off the following trivia topic and difficulty, you will generate a list of at least 20 trivia answers. Be sure to strictly adhere to the difficulty and taylor 
          the response to it, do not hold back. The harder the difficulty, the more unknown your response. You will only respond with json containing the answers, use a single key 
          "words". Don't include newline characters in your response."""},
         {"role": "user", "content": f'Topic: {category}, Difficulty: {difficulty}'}
