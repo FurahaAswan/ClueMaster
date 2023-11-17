@@ -109,18 +109,18 @@ class GameConsumer(AsyncWebsocketConsumer):
         print('RECIEVED', data)
 
         if message_type == 'guess':
-            await self.handle_guess(data['text'])
+            await self.handle_guess(data['text'], data['time'])
         elif message_type == 'chat_message':
             await self.handle_chat_message(data['text'])
         elif message_type == "start_game":
             await self.start_game()
     
     async def start_game(self):
-        await self.initialize_game()
         self.game = asyncio.ensure_future(self.game_loop())
         
     
     async def game_loop(self):
+        await self.initialize_game()
         # Ensure only the host can start the game
         if not self.host or self.host.id != self.player.id:
             return
@@ -137,12 +137,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         #         words.append(random_word)
 
         words = ['Word1', 'Word2', 'Word3', 'Word4', 'Word5']
-
         for i in range(self.room.rounds):
-            # clues = await bot.get_clues(words[i], self.room.category, self.room.difficulty)
-            # clues = json.loads(clues)
-            # clues = clues['clues']
-            # print(f'Clues for {words[i]}: ', clues)
+            
 
             # Generate a random word or retrieve it from an external source
             word_to_guess = words[i]  # Replace this with your word generation logic
@@ -180,11 +176,17 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await database_sync_to_async(self.current_round.save)()
 
+
+        # clues = await bot.get_clues(words[i], self.room.category, self.room.difficulty)
+            # clues = json.loads(clues)
+            # clues = clues['clues']
+            # print(f'Clues for {words[i]}: ', clues)
         clues = ['Clue 1', 'Clue 2 ', 'Clue 3']
         new_clue = await database_sync_to_async(Clue.objects.create)(text = clues[0], game_round = self.current_round)
         await database_sync_to_async(new_clue.save)()
 
         # Send timer information to the client based on self.room.guess_time
+        await self.initialize_game()
         await self.update_game_state()
         
         for time_left in range(self.current_round.time_left, 0, -1):
@@ -217,14 +219,25 @@ class GameConsumer(AsyncWebsocketConsumer):
  
 
     # Handle player guess
-    async def handle_guess(self, guess_text):
+    async def handle_guess(self, guess_text, time):
         if self.room and self.player:
             if self.current_round:
                 current_word = self.current_round.word
 
                 if guess_text.lower() == current_word.lower():
+
+                    time_taken = self.room.guess_time - int(self.calculate_expiration_timestamp() - time)
+
+                    time_weight = 0.8
+
+                    max_time = self.room.guess_time  # Maximum time allowed for a guess in seconds
+                    normalized_time = max(0, min(1, time_taken / max_time))  # Normalize time between 0 and 1
+
+                    # Calculate the final score as a weighted sum of time and creativity
+                    final_score = 200*(time_weight * (1 - normalized_time)) 
+
                     self.player.is_correct = True
-                    self.player.score += 1
+                    self.player.score += final_score
                     await database_sync_to_async(self.player.save)()
                     await self.update_game_state()
                     await self.send(text_data=json.dumps({
@@ -316,12 +329,12 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         if (
             old_room != self.room
-            or  old_player != self.player
-            or  old_host == self.host
+            or old_player != self.player
+            or old_host == self.host
             or old_players != self.players
-            or  old_current_round != self.current_round
-            or  old_timer != self.timer
-            or  old_is_correct != self.is_correct
+            or old_current_round != self.current_round
+            or old_timer != self.timer
+            or old_is_correct != self.is_correct
             or old_clues != self.clues
             or event['expiration_timestamp'] != self.calculate_expiration_timestamp() 
             or event['word_to_guess'] != self.build_word_to_guess()

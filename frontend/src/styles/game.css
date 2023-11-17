@@ -151,9 +151,10 @@ h1{
 
 .start{
     background-color: #4caf50;
-    height: 50px;
+    height: 20%;
     font-size: 20px;
     font-weight: bold;
+    width: 100%;
 }
 
 .start:hover {
@@ -162,10 +163,11 @@ h1{
 
 .link{
     background-color: rgb(76, 130, 175);
-    height: 50px;
+    height: 20%;
     font-size: 20px;
     font-weight: bold;
     margin-bottom: 10px;
+    width: 100%;
 }
 
 .link:hover{

@@ -109,7 +109,8 @@ const PlayGame = ()=> {
                 socketRef.current.send(JSON.stringify({
                     'type': 'guess',
                     'text': guess,
-                    'player': player.id
+                    'player': player.id,
+                    'time': new Date().getTime() / 1000
                 }));
             }
         }

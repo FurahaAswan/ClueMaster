@@ -29,6 +29,9 @@ class Room(models.Model):
 
     difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="easy")
 
+    def __str__(self):
+        return f"{self.name}(s) Room"
+
 
 class Player(models.Model):
     name = models.CharField(max_length=50)
@@ -54,11 +57,8 @@ class Round(models.Model):
 
         super().save(*args, **kwargs)
 
-    async def get_room(self):
-        return await database_sync_to_async(lambda: self.room.id)()
-
     def __str__(self):
-        return f"Round in {self.get_room()}"
+        return f"Round in {self.room}"
 
 class Clue(models.Model):
     text = models.CharField(max_length=255)
