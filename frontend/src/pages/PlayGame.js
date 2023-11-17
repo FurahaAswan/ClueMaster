@@ -1,13 +1,15 @@
-import React, { useEffect, useContext, useRef, useState } from 'react'
+import React, { useEffect, useContext, useRef, useState} from 'react'
 import { useNavigate } from 'react-router-dom';
 import { StateContext } from '../components/StateProvider';
 import '../styles/game.css';
 import clipboard from 'clipboard-copy';
+import axios from 'axios';
 
-const PlayGame = () => {
 
-    const { player, roomId } = useContext(StateContext);
-    const [timer, setTimer] = useState(0);
+const PlayGame = ()=> {
+
+    const { player, roomId, roomName, rounds, guessTime, maxPlayers, category, difficulty } = useContext(StateContext);
+    const [timer, setTimer] = useState(guessTime);
     const [guess, setGuess] = useState('')
     const navigate = useNavigate();
     const socketRef = useRef(null);
@@ -16,18 +18,28 @@ const PlayGame = () => {
     const [players, setPlayers] = useState([]);
     const [clues, setClues] = useState([]);
     const [host, setHost] = useState();
-
-    useEffect(() => {
-        if (!player){
-            navigate('/')
-        }
-    }, [player])
+    const [gameActive, setGameActive] = useState(false);
+    const [formData, setFormData] = useState({
+        name: roomName,
+        rounds: rounds,
+        guess_time: guessTime,
+        max_players: maxPlayers,
+        category: category, // Add category field
+        difficulty: difficulty, // Add difficulty field with default value
+      });
+    const [timeStamp, setTimeStamp] = useState(0)
 
     useEffect(() => {
         console.log('Chat Log updated:', chatlog);
     }, [chatlog]);
 
     useEffect(() => {
+
+        if (!player || !roomId){
+            navigate('/')
+        } else{
+            console.log('Player', player)
+
         socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/${player.id}`)
         const socket = socketRef.current
 
@@ -53,8 +65,10 @@ const PlayGame = () => {
                 socket.close();
             }
         }
+
+        }
         
-    }, [roomId, player.id]);
+    }, [player]);
 
         function handleWebSocketMessage(data) {
             console.log('handle')
@@ -62,8 +76,6 @@ const PlayGame = () => {
             if (data.type === 'guess') {
                 console.log('Received guess:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
-            } else if (data.type === 'timer_update') {
-                setTimer(data.value)
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
@@ -76,7 +88,9 @@ const PlayGame = () => {
                 setClues(data.clues)
                 setWordToGuess(data.word_to_guess);
                 setHost(data.host); // Ensure that 'host' is not null
-                setTimer(data.timer);
+                setTimer(data.unix_time);
+                setTimeStamp(data.expiration_timestamp);
+                setGameActive(data.game_active);
             } else if (data.type === 'player_leave') {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
             }
@@ -112,6 +126,50 @@ const PlayGame = () => {
             clipboard(window.location.host+`?roomId=${roomId}`);
         }
 
+        const generateOptions = (min, max, interval) => {
+            const options = [];
+            for (let i = min; i <= max; i += interval) {
+              options.push(<option key={i} value={i}>{i}</option>);
+            }
+            return options;
+        };
+
+        const handleChange = (e) => {
+            setFormData({ ...formData, [e.target.name]: e.target.value });
+        };
+
+        const handleSubmit = (e) => {
+            try {
+                e.preventDefault();
+                console.log('Form Data', formData)
+                const response = axios.put(`http://localhost:8000/api/room/update/${roomId}`, formData);
+                console.log('Room Updated successfully:', response.data);
+                startRound();
+            } catch (error) {
+              console.error('Error creating room:', error);
+            }
+        };
+    
+        // Assuming timestamp is the Unix timestamp received from the server
+        const calculateTimeLeft = () => {
+            const now = new Date().getTime() / 1000;
+            const timeLeft = Math.max(0, Math.floor((timeStamp - now))); // in seconds
+            return timeLeft;
+        };
+        
+        // Use useEffect to update the timer every second
+        useEffect(() => {
+            const interval = gameActive && setInterval(() => {
+              const timeLeft = calculateTimeLeft();
+              // Update your UI with the remaining time
+              setTimer(timeLeft)
+              console.log('Time Left: ', timeLeft);
+            }, 1000);
+          
+            return () => clearInterval(interval);
+          }, [timeStamp, gameActive]);
+        
+
     return (
         <div className='game-container'>
             <div className='header'>
@@ -130,8 +188,50 @@ const PlayGame = () => {
                     ))
                 }
                 <div className={host && player && host.id === player.id ? 'options' : 'hide'}>
-                    <button className='link' onClick={copyInviteLink}>Click to get Invite Link</button>
-                    <button className='start' onClick={startRound}>Start</button>
+                    {gameActive ? ' ' : 
+                        <div className='update-container'>
+                        <form className='form-container' onSubmit={handleSubmit}>
+                          <label className='label'>
+                            Room Name:
+                            <input type="text" name="name" value={formData.name} onChange={handleChange} className='input-field' required />
+                          </label>
+                          <label className='label'>
+                            Rounds:
+                            <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
+                              {generateOptions(2,10,1)}
+                            </select>
+                          </label>
+                          <label className='label'>
+                            Guess Time:
+                            <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='input-field' required>
+                              {generateOptions(60,200,10)}
+                            </select>
+                          </label>
+                          <label className='label'>
+                            Max Players:
+                            <select name="max_players" value={formData.max_players} onChange={handleChange} className='input-field' required>
+                              {generateOptions(2,20,1)}
+                            </select>
+                          </label>
+                          {/* Add category field */}
+                          <label className='label'>
+                            Category:
+                            <input type="text" name="category" value={formData.category} onChange={handleChange} className='input-field' required />
+                          </label>
+                          {/* Add difficulty field */}
+                          <label className='label'>
+                            Difficulty:
+                            <select name="difficulty" value={formData.difficulty} onChange={handleChange} className='input-field' required>
+                              <option value="easy">Easy</option>
+                              <option value="medium">Medium</option>
+                              <option value="hard">Hard</option>
+                            </select>
+                          </label>
+                          <button className='link' type='button' onClick={copyInviteLink}>Click to get Invite Link</button>
+                          <button className='start' type='submit'>Start</button>
+                        </form>
+                      </div>
+                    }
                 </div>
             </div>
             <div className='scoreboard'>
@@ -153,7 +253,7 @@ const PlayGame = () => {
                             : message.type === 'player_join' ? 
                                 <p className='join'> {message.name} joined the room!</p> 
                             : message.type === 'guess' ? 
-                                <p><span className='name'>{message.player_name}:</span> {message.text}</p>
+                                <p><span className='name'>{message.player_name}:</span> <span style={message.is_correct ? {color: '#4caf50', fontWeight: 'bold'} : {}}>{message.text}</span></p>
                             : message.type === 'player_leave' ? 
                                 <p className='leave'>{message.name} left the room</p>
                             :
@@ -168,6 +268,6 @@ const PlayGame = () => {
             </div>
         </div>
     )
-}
+};
 
 export default PlayGame

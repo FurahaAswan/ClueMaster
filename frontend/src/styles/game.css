@@ -70,7 +70,7 @@ h1{
     display: grid;
     grid-template-columns: 3fr 6fr 3fr;
     grid-template-rows: 70px 1fr .1fr;
-    min-width: 777px; 
+    min-width: 800px; 
     min-height: 500px;
     margin: 0 auto;
 }
@@ -150,23 +150,26 @@ h1{
 }
 
 .start{
-    background-color: rgb(93, 224, 104);
+    background-color: #4caf50;
     height: 50px;
     font-size: 20px;
     font-weight: bold;
 }
 
+.start:hover {
+    background-color: #45a049;
+  }
+
 .link{
-    background-color: rgb(88, 146, 233);
+    background-color: rgb(76, 130, 175);
     height: 50px;
     font-size: 20px;
     font-weight: bold;
     margin-bottom: 10px;
 }
 
-
-.clue-board .clue{
-
+.link:hover{
+    background-color: rgb(57, 122, 175);
 }
 
 .player-chat {

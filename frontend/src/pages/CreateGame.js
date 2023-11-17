@@ -49,39 +49,39 @@ const CreateGame = () => {
   };
 
   return (
-    <div className='container'>
-      <form className='formContainer' onSubmit={handleSubmit}>
+    <div className='create-container'>
+      <form className='form-container' onSubmit={handleSubmit}>
         <label className='label'>
           Room Name:
-          <input type="text" name="name" value={formData.name} onChange={handleChange} className='inputField' required />
+          <input type="text" name="name" value={formData.name} onChange={handleChange} className='input-field' required />
         </label>
         <label className='label'>
           Rounds:
-          <select name="rounds" value={formData.rounds} onChange={handleChange} className='inputField' required>
+          <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
             {generateOptions(2,10,1)}
           </select>
         </label>
         <label className='label'>
           Guess Time:
-          <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='inputField' required>
+          <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='input-field' required>
             {generateOptions(60,200,10)}
           </select>
         </label>
         <label className='label'>
           Max Players:
-          <select name="max_players" value={formData.max_players} onChange={handleChange} className='inputField' required>
+          <select name="max_players" value={formData.max_players} onChange={handleChange} className='input-field' required>
             {generateOptions(2,20,1)}
           </select>
         </label>
         {/* Add category field */}
         <label className='label'>
           Category:
-          <input type="text" name="category" value={formData.category} onChange={handleChange} className='inputField' required />
+          <input type="text" name="category" value={formData.category} onChange={handleChange} className='input-field' required />
         </label>
         {/* Add difficulty field */}
         <label className='label'>
           Difficulty:
-          <select name="difficulty" value={formData.difficulty} onChange={handleChange} className='inputField' required>
+          <select name="difficulty" value={formData.difficulty} onChange={handleChange} className='input-field' required>
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>

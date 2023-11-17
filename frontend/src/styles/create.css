@@ -1,11 +1,11 @@
-.container{
+.create-container{
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
 }
 
-.formContainer {
+.form-container {
   width: 300px;
   margin: 0 auto;
   padding: 20px;
@@ -20,7 +20,7 @@
   margin-bottom: 8px;
 }
 
-.inputField {
+.input-field {
   width: 100%;
   padding: 8px;
   margin-bottom: 16px;

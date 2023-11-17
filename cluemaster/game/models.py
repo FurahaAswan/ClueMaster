@@ -9,13 +9,13 @@ class Room(models.Model):
         max_length=40,
         primary_key=True,
     )
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, default=f'Room {id}')
     created_at = models.DateTimeField(auto_now_add=True)
-    rounds = models.PositiveIntegerField()
-    guess_time = models.PositiveIntegerField()
-    max_players = models.PositiveIntegerField()
+    rounds = models.PositiveIntegerField(default=2)
+    guess_time = models.PositiveIntegerField(default=60)
+    max_players = models.PositiveIntegerField(default=2)
     is_active = models.BooleanField(default=True)
-    category = models.CharField(max_length=50)
+    category = models.CharField(max_length=50, default='General Knowledge')
 
     EASY = 'easy'
     MEDIUM = 'medium'
@@ -29,6 +29,7 @@ class Room(models.Model):
 
     difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="easy")
 
+
 class Player(models.Model):
     name = models.CharField(max_length=50)
     score = models.PositiveIntegerField(default=0)
@@ -41,6 +42,17 @@ class Round(models.Model):
     is_active = models.BooleanField(default=True)
     word = models.CharField(max_length=255)
     time_left = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    async def get_room_guess_time(self):
+        return await database_sync_to_async(lambda: self.room.guess_time)()
+
+    def save(self, *args, **kwargs):
+        if not self.time_left:
+            # Set the default value for time_left based on the room's guess_time
+            self.time_left = self.get_room_guess_time()
+
+        super().save(*args, **kwargs)
 
     async def get_room(self):
         return await database_sync_to_async(lambda: self.room.id)()
