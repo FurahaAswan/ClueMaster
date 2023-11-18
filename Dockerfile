@@ -8,6 +8,9 @@ COPY requirements.txt .
 
 RUN pip install -r requirements-unix.txt
 
+COPY . .
+
 EXPOSE 8000
 
-CMD ['python','manage.py','runserver']
+CMD ["python","cluemaster/manage.py","runserver"]
+
