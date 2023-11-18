@@ -31,9 +31,8 @@ const CreateGame = () => {
 
     try {
       console.log('Form Data', formData)
-      const response = await axios.post('http://localhost:8000/api/room/create/', formData);
+      const response = await client.post('/api/room/create/', formData);
       console.log('Room created successfully:', response.data);
-
       navigate(`/?roomId=${response.data.id}&playerName=${playerName}`);
     } catch (error) {
       console.error('Error creating room:', error);

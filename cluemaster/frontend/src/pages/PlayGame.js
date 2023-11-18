@@ -47,7 +47,7 @@ const PlayGame = ()=> {
         } else{
             console.log('Player', player)
 
-        socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/${player.id}`)
+        socketRef.current = new WebSocket(`ws://${window.location.host}/ws/game/${roomId}/${player.id}`)
         const socket = socketRef.current
 
         console.log('chatSocket: ', socket)
