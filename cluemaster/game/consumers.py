@@ -14,6 +14,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.player_id = self.scope['url_route']['kwargs']['player_id']
         self.room_group_name = f"room_{self.room_id}"
         self.game = None
+        self.loading = False
 
         # Join room group
         await self.channel_layer.group_add(
@@ -40,6 +41,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.timer = self.current_round.time_left if self.current_round else self.room.guess_time
         self.is_correct = False
         self.clues = await self.get_clues()
+        
 
         if not (self.player and self.room):
             await self.close()
@@ -116,25 +118,32 @@ class GameConsumer(AsyncWebsocketConsumer):
         
     
     async def game_loop(self):
+        self.loading = True
+        await self.send_loading_state()
+        self.room = await self.get_room()
         # Ensure only the host can start the game
         if not self.host or self.host.id != self.player.id:
+            self.loading = False
+            await self.send_loading_state()
             return
         
-        words = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
-        print('Words: ', words)
-        words = json.loads(words)
-        words_data = words['words']
+        trivia_data = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
+        print('Words: ', trivia_data)
+        trivia_data = json.loads(trivia_data)
+        trivia_data = trivia_data['trivia_answers']
         #words_data = ['Word1', 'Word2', 'Word3', 'Word4', 'Word5']
-        words = []
+        answers = []
         for i in range(self.room.rounds):
-            random_word = random.choice(words_data)
-            if random_word not in words:
-                words.append(random_word)
-            words.append(words_data[i])
+            print(i)
+            random_word = random.choice(trivia_data)
+            if random_word not in answers:
+                answers.append(random_word)
 
-        for word_to_guess in words:
+
+        print(f'{self.room.rounds} Words: ', answers)
+        for answer in answers:
             # Create a new round
-            await self.handle_round(word_to_guess)
+            await self.handle_round(answer)
 
             #Wait for 10 seconds in between rounds
             await asyncio.sleep(2)
@@ -153,6 +162,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 
     async def handle_round(self, word_to_guess):
+        self.loading = True
+        await self.send_loading_state()
         # Create a new round
         self.current_round = await database_sync_to_async(Round.objects.create)(
             word=word_to_guess, 
@@ -171,6 +182,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         # Send timer information to the client based on self.room.guess_time
         await self.update_game_state()
+
+        self.loading =  False
+        await self.send_loading_state()
         
         for time_left in range(self.current_round.time_left, 0, -1):
             self.current_round.time_left = time_left
@@ -267,8 +281,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         word_to_guess = self.build_word_to_guess()
         if self.current_round and self.current_round.is_active:
             expiration_timestamp = int((self.current_round.created_at + timedelta(seconds=self.room.guess_time)).timestamp())
-        
-        print(self.clues)
+            
         # Send the game state to the player
         await self.channel_layer.group_send(
                 self.room_group_name,
@@ -325,8 +338,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             or old_game != self.game
         ):
 
-            # Send game state to the connected clients
-            print('Game', self.game)
             await self.send(text_data=json.dumps({
                 'type': 'game_state',
                 'player_name': self.player.name if self.player else None,
@@ -336,10 +347,26 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'players': [{'id': player.id, 'player_name': player.name, 'score': player.score} for player in self.players],
                 'host': {'id': self.host.id, 'name': self.host.name} if self.host else None,
                 'expiration_timestamp': event['expiration_timestamp'],
-                'game_active': True if self.game else False
+                'game_active': True if self.game else False,
+                'loading_state': self.loading
             }))
         
         return
+    
+    async def send_loading_state(self):
+        await self.channel_layer.group_send(
+                self.room_group_name,
+        {
+            'type': 'loading_state',
+            'loading_state': self.loading
+        })
+    
+    async def loading_state(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'loading_state',
+            'loading_state': event['loading_state']
+        }))
+
 
 
     # Helper functions to get room, player, current round, and current clue

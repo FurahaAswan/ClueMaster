@@ -4,7 +4,8 @@ import { StateContext } from '../components/StateProvider';
 import '../styles/game.css';
 import clipboard from 'clipboard-copy';
 import axios from 'axios';
-
+import { ring2 } from 'ldrs'
+ring2.register()
 
 const PlayGame = ()=> {
 
@@ -29,6 +30,11 @@ const PlayGame = ()=> {
       });
     const [timeStamp, setTimeStamp] = useState(0);
     const messagesRef = useRef(null);
+    const [loading, setLoading] = useState(true);
+
+   
+
+    // Default values shown
 
     useEffect(() => {
         console.log('Chat Log updated:', chatlog);
@@ -74,7 +80,10 @@ const PlayGame = ()=> {
         function handleWebSocketMessage(data) {
             console.log('handle')
             // Handle different types of messages here
-            if (data.type === 'guess') {
+            if (data.type === 'loading_state'){
+                console.log('Loading state', data.loading_state);
+                setLoading(data.loading_state);
+            }else if(data.type === 'guess'){
                 console.log('Received guess:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
                 messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -93,6 +102,7 @@ const PlayGame = ()=> {
                 setTimer(data.unix_time);
                 setTimeStamp(data.expiration_timestamp);
                 setGameActive(data.game_active);
+                setLoading(data.loading_state);
             } else if (data.type === 'player_leave') {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
             }
@@ -180,12 +190,24 @@ const PlayGame = ()=> {
             </div>
             <div className='clue-board'>
                 {
+                    loading ? 
+                        <l-ring-2
+                        size="40"
+                        stroke="5"
+                        stroke-length="0.25"
+                        bg-opacity="0.1"
+                        speed="0.8" 
+                        color="black" 
+                        ></l-ring-2>
+                    :
                     clues.map((clue, index) => (
                         <h1 key={index} className='clue'>{index+1}. {clue}</h1>
                     ))
                 }
-                <div className={host && player && host.id === player.id ? 'options' : 'hide'}>
-                    {gameActive ? ' ' : 
+                {
+                    !loading &&
+                    <div className={host && player && host.id === player.id ? 'options' : 'hide'}>
+                    {!gameActive && 
                         <div className='update-container'>
                         <form className='form-container' onSubmit={handleSubmit}>
                           <label className='label'>
@@ -222,6 +244,8 @@ const PlayGame = ()=> {
                               <option value="easy">Easy</option>
                               <option value="medium">Medium</option>
                               <option value="hard">Hard</option>
+                              <option value="enthusiast">Enthusiast</option>
+                              <option value="expert">Expert</option>
                             </select>
                           </label>
                           <button className='link' type='button' onClick={copyInviteLink}>Click to get Invite Link</button>
@@ -230,6 +254,7 @@ const PlayGame = ()=> {
                       </div>
                     }
                 </div>
+                }
             </div>
             <div className='scoreboard'>
                 {

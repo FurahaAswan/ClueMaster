@@ -20,14 +20,18 @@ class Room(models.Model):
     EASY = 'easy'
     MEDIUM = 'medium'
     HARD = 'hard'
+    ENTHUSIAST = 'enthusiast'
+    EXPERT = 'expert'
 
     DIFFICULTY_CHOICES = (
         (EASY, 'Easy'),
         (MEDIUM, 'Medium'),
-        (HARD, 'Hard'), 
+        (HARD, 'Hard'),
+        (ENTHUSIAST, 'Enthusiast'),
+        (EXPERT, 'Expert'), 
     )
 
-    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="easy")
+    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="medium")
 
     def __str__(self):
         return f"{self.name}(s) Room"

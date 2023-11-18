@@ -11,7 +11,7 @@ export const StateProvider = ({ children }) => {
   const [guessTime, setGuessTime] = useState(60); // Add setter for guessTime
   const [maxPlayers, setMaxPlayers] = useState(2); // Add setter for maxPlayers
   const [category, setCategory] = useState('General Knowledge'); // Add setter for category
-  const [difficulty, setDifficulty] = useState('easy'); // Add setter for difficulty
+  const [difficulty, setDifficulty] = useState('medium'); // Add setter for difficulty
 
   const client = axios.create({
     baseURL: 'http://localhost:8000'
