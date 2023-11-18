@@ -1,6 +1,5 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from .models import Room, Player, Clue, Round
 import asyncio
@@ -113,41 +112,32 @@ class GameConsumer(AsyncWebsocketConsumer):
         elif message_type == 'chat_message':
             await self.handle_chat_message(data['text'])
         elif message_type == "start_game":
-            await self.start_game()
-    
-    async def start_game(self):
-        self.game = asyncio.ensure_future(self.game_loop())
+            self.game = asyncio.ensure_future(self.game_loop())
         
     
     async def game_loop(self):
-        await self.initialize_game()
         # Ensure only the host can start the game
         if not self.host or self.host.id != self.player.id:
             return
         
-        #words = ["exampleword", "Lebron James", "Fish"]
-        # words = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
-        # print('Words: ', words)
-        # words = json.loads(words)
-        # words_data = words['words']
-        # words = []
-        # for i in range(self.room.rounds):
-        #     random_word = random.choice(words_data)
-        #     if random_word not in words:
-        #         words.append(random_word)
-
-        words = ['Word1', 'Word2', 'Word3', 'Word4', 'Word5']
+        words = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
+        print('Words: ', words)
+        words = json.loads(words)
+        words_data = words['words']
+        #words_data = ['Word1', 'Word2', 'Word3', 'Word4', 'Word5']
+        words = []
         for i in range(self.room.rounds):
-            
+            random_word = random.choice(words_data)
+            if random_word not in words:
+                words.append(random_word)
+            words.append(words_data[i])
 
-            # Generate a random word or retrieve it from an external source
-            word_to_guess = words[i]  # Replace this with your word generation logic
-
+        for word_to_guess in words:
             # Create a new round
             await self.handle_round(word_to_guess)
 
             #Wait for 10 seconds in between rounds
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
                 
         # Game over or any other logic after the rounds
         self.game = None
@@ -163,10 +153,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 
     async def handle_round(self, word_to_guess):
-        #delete old rounds
-        if self.current_round:
-            await database_sync_to_async(self.current_round.delete)()
-
         # Create a new round
         self.current_round = await database_sync_to_async(Round.objects.create)(
             word=word_to_guess, 
@@ -176,17 +162,14 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await database_sync_to_async(self.current_round.save)()
 
-
-        # clues = await bot.get_clues(words[i], self.room.category, self.room.difficulty)
-            # clues = json.loads(clues)
-            # clues = clues['clues']
-            # print(f'Clues for {words[i]}: ', clues)
-        clues = ['Clue 1', 'Clue 2 ', 'Clue 3']
-        new_clue = await database_sync_to_async(Clue.objects.create)(text = clues[0], game_round = self.current_round)
-        await database_sync_to_async(new_clue.save)()
+        clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty)
+        clues = json.loads(clues)
+        clues = clues['clues']
+        print(f'Clues for {word_to_guess}: ', clues)
+        #clues = ['Clue 1', 'Clue 2 ', 'Clue 3']
+        await database_sync_to_async(Clue.objects.create)(text = clues[0], game_round = self.current_round)
 
         # Send timer information to the client based on self.room.guess_time
-        await self.initialize_game()
         await self.update_game_state()
         
         for time_left in range(self.current_round.time_left, 0, -1):
@@ -197,12 +180,13 @@ class GameConsumer(AsyncWebsocketConsumer):
 
             #Give a clue every 15 seconds
             if time_elapsed > 0 and time_elapsed%15 == 0 and time_elapsed/15 < len(clues):
-                new_clue = await database_sync_to_async(Clue.objects.create)(text = clues[time_elapsed//15], game_round = self.current_round)
-                await database_sync_to_async(new_clue.save)()
+                await database_sync_to_async(Clue.objects.create)(text = clues[time_elapsed//15], game_round = self.current_round)
                 await self.update_game_state()
-                print(time_left, self.clues)
 
             if all(player.is_correct == True for player in self.players):
+                self.current_round.is_active = False
+                await database_sync_to_async(self.current_round.save)()
+                await self.update_game_state()
                 break
                 
             await asyncio.sleep(1)  # Wait for 1 second
@@ -212,7 +196,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             player.is_correct = False
             await database_sync_to_async(player.save)()
         
-        #set current round to false
         self.current_round.is_active = False
         await database_sync_to_async(self.current_round.save)()
         await self.update_game_state()
@@ -314,14 +297,15 @@ class GameConsumer(AsyncWebsocketConsumer):
         return None
     
     async def game_state(self, event):
-        old_room = await self.get_room()
-        old_player = await self.get_player()
-        old_host = await self.get_host()
-        old_players = await self.get_all_players()
-        old_current_round = await self.get_current_round()
+        old_room = self.room
+        old_player = self.player
+        old_host = self.host
+        old_players = self.players
+        old_current_round = self.current_round
         old_timer = self.current_round.time_left if self.current_round else self.room.guess_time
         old_is_correct = False
         old_clues = self.clues
+        old_game = self.game
 
 
         #update game state
@@ -338,9 +322,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             or old_clues != self.clues
             or event['expiration_timestamp'] != self.calculate_expiration_timestamp() 
             or event['word_to_guess'] != self.build_word_to_guess()
+            or old_game != self.game
         ):
 
             # Send game state to the connected clients
+            print('Game', self.game)
             await self.send(text_data=json.dumps({
                 'type': 'game_state',
                 'player_name': self.player.name if self.player else None,
@@ -350,8 +336,10 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'players': [{'id': player.id, 'player_name': player.name, 'score': player.score} for player in self.players],
                 'host': {'id': self.host.id, 'name': self.host.name} if self.host else None,
                 'expiration_timestamp': event['expiration_timestamp'],
-                'game_active': True if self.game else False,
+                'game_active': True if self.game else False
             }))
+        
+        return
 
 
     # Helper functions to get room, player, current round, and current clue
@@ -372,7 +360,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_current_round(self):
         try:
-            return Round.objects.get(room=self.room)
+            return Round.objects.get(room=self.room, is_active=True)
         except Round.DoesNotExist:
             return None
 

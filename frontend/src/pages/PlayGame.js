@@ -27,7 +27,8 @@ const PlayGame = ()=> {
         category: category, // Add category field
         difficulty: difficulty, // Add difficulty field with default value
       });
-    const [timeStamp, setTimeStamp] = useState(0)
+    const [timeStamp, setTimeStamp] = useState(0);
+    const messagesRef = useRef(null);
 
     useEffect(() => {
         console.log('Chat Log updated:', chatlog);
@@ -68,7 +69,7 @@ const PlayGame = ()=> {
 
         }
         
-    }, [player]);
+    }, []);
 
         function handleWebSocketMessage(data) {
             console.log('handle')
@@ -76,6 +77,7 @@ const PlayGame = ()=> {
             if (data.type === 'guess') {
                 console.log('Received guess:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
+                messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
@@ -104,7 +106,8 @@ const PlayGame = ()=> {
             }
         }
         
-        function sendGuess() {
+        function sendGuess(e) {
+            e.preventDefault();
             if (socketRef.current.readyState === WebSocket.OPEN) {
                 socketRef.current.send(JSON.stringify({
                     'type': 'guess',
@@ -113,15 +116,9 @@ const PlayGame = ()=> {
                     'time': new Date().getTime() / 1000
                 }));
             }
+            setGuess('');
         }
         
-
-        let handleKeyDown = (e) => {
-            if (e.key === 'Enter') {
-                sendGuess();
-                setGuess('');
-            }
-        }
 
         function copyInviteLink() {
             clipboard(window.location.host+`?roomId=${roomId}`);
@@ -139,11 +136,11 @@ const PlayGame = ()=> {
             setFormData({ ...formData, [e.target.name]: e.target.value });
         };
 
-        const handleSubmit = (e) => {
+        const handleSubmit = async (e) => {
             try {
                 e.preventDefault();
                 console.log('Form Data', formData)
-                const response = axios.put(`http://localhost:8000/api/room/update/${roomId}`, formData);
+                const response = await axios.put(`http://localhost:8000/api/room/update/${roomId}`, formData);
                 console.log('Room Updated successfully:', response.data);
                 startRound();
             } catch (error) {
@@ -164,7 +161,6 @@ const PlayGame = ()=> {
               const timeLeft = calculateTimeLeft();
               // Update your UI with the remaining time
               setTimer(timeLeft)
-              console.log('Time Left: ', timeLeft);
             }, 1000);
           
             return () => clearInterval(interval);
@@ -246,6 +242,7 @@ const PlayGame = ()=> {
                 }
             </div>
             <div className='player-chat'>
+                <div ref={messagesRef} className='messages'>
                 {
                     chatlog.map((message, index) => (
                         <div key={index} className={index % 2 === 0 ? 'chat-message' : 'chat-message alt'}>
@@ -263,9 +260,10 @@ const PlayGame = ()=> {
                         </div>
                     ))
                 }
-                <div className='user-input'>
-                    <input type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} onKeyDown={handleKeyDown}/>
                 </div>
+                <form onSubmit={sendGuess} className='user-input'>
+                    <input type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} required/>
+                </form>
             </div>
         </div>
     )

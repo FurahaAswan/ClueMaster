@@ -73,9 +73,6 @@ const JoinGame = () => {
             setDifficulty(response.data.difficulty);
             setRoomName(response.data.name);
             setRoomId(response.data.id);
-    
-            // Now that setRoomId has completed, call joinRoom
-            joinRoom();
         } catch (error) {
             console.log(error);
         }

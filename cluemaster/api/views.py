@@ -28,15 +28,13 @@ def joinRoom(request, room_id):
 
 @api_view(['PUT'])
 def updateRoom(request, room_id):
-    print('UPDATING ROOM')
     room = Room.objects.get(id=room_id)
     request.data['id'] = room.id
     room_serializer = RoomSerializer(room, data=request.data)
 
-    #Room.objects.filter(room=room.id).update(name = request.data['name'], rounds = request.data['rounds'], guess_time = request.data['guess_time'], max_players = request.data['max_players'], category = request.data['category'], difficulty = request.data['difficulty'])
-
     if room_serializer.is_valid():
         room_serializer.save()
+        print('UPDATING ROOdM')
         return Response(room_serializer.data)
 
     return Response(room_serializer.errors, status=400)

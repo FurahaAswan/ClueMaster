@@ -15,7 +15,7 @@ class Room(models.Model):
     guess_time = models.PositiveIntegerField(default=60)
     max_players = models.PositiveIntegerField(default=2)
     is_active = models.BooleanField(default=True)
-    category = models.CharField(max_length=50, default='General Knowledge')
+    category = models.CharField(max_length=50, default='General Knowledge (Math, Science, Art, Sports, etc.)')
 
     EASY = 'easy'
     MEDIUM = 'medium'
