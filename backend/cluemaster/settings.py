@@ -19,6 +19,9 @@ dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 load_dotenv()
 
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,19 +30,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-b(vny=82km)nqs-0t5i5z87bf7^lbm4ps=o1thqkh4l5*ub#1n'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
-    '*'
+    "http://127.0.0.1",  
+    "http://localhost",
+    'http://0.0.0.0',
+    os.environ.get('WEBSITE_HOST'),
 ]
 
 CORS_ALLOWED_ORIGINS = [ 
     "http://127.0.0.1",  
     "http://localhost",
-    'http://0.0.0.0'
+    'http://0.0.0.0',
+    os.environ.get('WEBSITE_HOST'),
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -80,7 +87,7 @@ ROOT_URLCONF = 'cluemaster.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'frontend/build')],
+        'DIRS': [os.path.join(BASE_DIR, '../frontend/build')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -105,8 +112,8 @@ DATABASES = {
         'NAME': os.environ.get('DB_NAME'), 
         'USER': os.environ.get('DB_USER'),
         'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'), 
-        'PORT': os.environ.get('DB_PORT'),
+        'HOST': 'db', 
+        'PORT': '5432',
     }
 }
 
@@ -146,9 +153,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'frontend/build/static')
-]
+STATICFILES_DIRS = []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -162,7 +167,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("localhost", 6379)],
+            "hosts": [("redis://default:"+os.environ.get('REDIS_PASSWORD')+"@cache:6379")],
         },
     },
 }
