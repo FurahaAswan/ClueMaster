@@ -40,6 +40,7 @@ ALLOWED_HOSTS = [
     "http://localhost",
     'http://0.0.0.0',
     os.environ.get('WEBSITE_HOST'),
+    "http:10.0.0.43"
 ]
 
 CORS_ALLOWED_ORIGINS = [ 
