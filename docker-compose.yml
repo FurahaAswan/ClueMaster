@@ -60,13 +60,13 @@ services:
     volumes:
       - db_admin_data:/var/lib/pgadmin
   nginx:
-    image: nginx:latest
+    build: 
+      context: ./nginx
     volumes:
       - static:/static
       - frontend:/var/www/frontend
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
-      - ./nginx:/etc/nginx/conf.d/default.conf
     restart: unless-stopped
     ports:
       - '80:80'
