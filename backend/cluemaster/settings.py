@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
+import json
 from os.path import join, dirname
 from dotenv import load_dotenv
 
@@ -35,27 +36,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    '0.0.0.0',
-    'http://localhost'
-    "http://127.0.0.1",  
-    "localhost",
-    'http://0.0.0.0',
-    os.environ.get('WEBSITE_HOST'),
-    "https://10.0.0.43",
-    "http://10.0.0.43",
-    '10.0.0.43',
-]
+ALLOWED_HOSTS = json.loads(os.environ.get('ALLOWED_HOSTS'))
 
-CORS_ALLOWED_ORIGINS = [ 
-    "http://127.0.0.1",  
-    "http://localhost",
-    'http://0.0.0.0',
-    os.environ.get('WEBSITE_HOST'),
-    "https://10.0.0.43",
-    "http://10.0.0.43",
-]
+CORS_ALLOWED_ORIGINS = json.loads(os.environ.get('ALLOWED_ORIGINS'))
 
 CORS_ALLOW_CREDENTIALS = True
 
