@@ -9,7 +9,17 @@ ring2.register()
 
 const PlayGame = ()=> {
 
-    const { player, roomId, roomName, rounds, guessTime, maxPlayers, category, difficulty } = useContext(StateContext);
+    const { 
+        client,
+        player, 
+        roomId, 
+        roomName, 
+        rounds, 
+        guessTime, 
+        maxPlayers, 
+        category, 
+        difficulty 
+    } = useContext(StateContext);
     const [timer, setTimer] = useState(guessTime);
     const [guess, setGuess] = useState('')
     const navigate = useNavigate();
@@ -150,7 +160,7 @@ const PlayGame = ()=> {
             try {
                 e.preventDefault();
                 console.log('Form Data', formData)
-                const response = await axios.put(`http://localhost:8000/api/room/update/${roomId}`, formData);
+                const response = await client.put(`api/room/update/${roomId}`, formData);
                 console.log('Room Updated successfully:', response.data);
                 startRound();
             } catch (error) {
