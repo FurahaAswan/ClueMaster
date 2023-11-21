@@ -2,7 +2,6 @@ import React, {useState, useContext, useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StateContext } from '../components/StateProvider';
 import '../styles/join.css';
-import '../styles/create.css';
 
 const JoinGame = () => {
 

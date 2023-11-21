@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { StateContext } from '../components/StateProvider';
 import '../styles/game.css';
 import clipboard from 'clipboard-copy';
-import axios from 'axios';
 import { ring2 } from 'ldrs'
 ring2.register()
 
@@ -57,7 +56,8 @@ const PlayGame = ()=> {
         } else{
             console.log('Player', player)
 
-        socketRef.current = new WebSocket(`ws://${window.location.host}/ws/game/${roomId}/${player.id}`)
+        // socketRef.current = new WebSocket(`ws://${window.location.host}/ws/game/${roomId}/${player.id}`)
+        socketRef.current = new WebSocket(`ws://localhost:8000/ws/game/${roomId}/${player.id}`)
         const socket = socketRef.current
 
         console.log('chatSocket: ', socket)
