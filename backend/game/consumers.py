@@ -131,7 +131,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         print('Words: ', trivia_data)
         trivia_data = json.loads(trivia_data)
         trivia_data = trivia_data['trivia_answers']
-        #words_data = ['Word1', 'Word2', 'Word3', 'Word4', 'Word5']
+        
         answers = []
         for i in range(self.room.rounds):
             print(i)
@@ -176,6 +176,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty)
         clues = json.loads(clues)
         clues = clues['clues']
+
+        checked_clues = []
+        for clue in clues:
+            checked_clues.append(clue.replace(word_to_guess, self.build_word_to_guess()))
+
+        clues = checked_clues
+        
         print(f'Clues for {word_to_guess}: ', clues)
         #clues = ['Clue 1', 'Clue 2 ', 'Clue 3']
         await database_sync_to_async(Clue.objects.create)(text = clues[0], game_round = self.current_round)
