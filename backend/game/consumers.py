@@ -75,12 +75,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             if self.player.is_host and len(self.players) > 1:
                 await self.select_host()
 
-        if len(self.players) == 1:
+        if len(self.players) == 0:
             await database_sync_to_async(self.room.delete)()
             if self.game:
                 self.game.cancel()
             await self.close()
-        elif len(self.players) > 1:
+        elif len(self.players) > 0:
             await self.channel_layer.group_send(
             self.room_group_name, {
                 'type': 'player_leave',
@@ -131,7 +131,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         print('Words: ', trivia_data)
         trivia_data = json.loads(trivia_data)
         trivia_data = trivia_data['trivia_answers']
-        
+
         answers = []
         for i in range(self.room.rounds):
             print(i)
@@ -231,17 +231,30 @@ class GameConsumer(AsyncWebsocketConsumer):
                 if guess_text.lower() == current_word.lower():
 
                     time_taken = self.room.guess_time - int(self.calculate_expiration_timestamp() - time)
-
                     time_weight = 0.8
+                    order_weight = 0.2
 
                     max_time = self.room.guess_time  # Maximum time allowed for a guess in seconds
                     normalized_time = max(0, min(1, time_taken / max_time))  # Normalize time between 0 and 1
 
-                    # Calculate the final score as a weighted sum of time and creativity
-                    final_score = 200*(time_weight * (1 - normalized_time)) 
+                    # Calculate the time_bonus as a weighted sum of time and creativity
+                    time_bonus = 150 * (time_weight * (1 - normalized_time))
+
+                    total_correct_answers = 1
+
+                    for player in self.players:
+                        if player.is_correct:
+                            total_correct_answers += 1
+
+                    # Calculate the order_bonus based on the order of correct answers
+                    order_bonus = 150 * order_weight * (1 / total_correct_answers)  # Assuming total_correct_answers is the count of correct answers
+
+                    # Add the time_bonus and order_bonus to the player's score
+                    player_score = time_bonus + order_bonus
+
 
                     self.player.is_correct = True
-                    self.player.score += final_score
+                    self.player.score += player_score
                     await database_sync_to_async(self.player.save)()
                     await self.update_game_state()
                     await self.send(text_data=json.dumps({
@@ -286,9 +299,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def update_game_state(self):
         expiration_timestamp = self.calculate_expiration_timestamp()
         word_to_guess = self.build_word_to_guess()
-        if self.current_round and self.current_round.is_active:
-            expiration_timestamp = int((self.current_round.created_at + timedelta(seconds=self.room.guess_time)).timestamp())
-            
+
         # Send the game state to the player
         await self.channel_layer.group_send(
                 self.room_group_name,

@@ -227,7 +227,7 @@ const PlayGame = ()=> {
                           <label className='label'>
                             Rounds:
                             <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
-                              {generateOptions(2,10,1)}
+                              {generateOptions(10,50,1)}
                             </select>
                           </label>
                           <label className='label'>

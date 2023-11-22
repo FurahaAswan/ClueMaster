@@ -55,8 +55,13 @@
 }
 
 body {
-    background-color: rgb(192, 209, 235);
+    background-color: rgb(72, 141, 246);
     font-family: 'Roboto', sans-serif;
+    height: 100vh;
+}
+
+#root {
+    height: 100%;
 }
 
 h1{
@@ -65,23 +70,21 @@ h1{
 
 .game-container {
     width: 80%;
-    height: auto;
-    padding: 60px;
+    height: 100%;
+    margin: 0 auto;
+    padding: 50px;
     display: grid;
     grid-template-columns: 3fr 6fr 3fr;
     grid-template-rows: 70px 1fr .1fr;
     min-width: 800px; 
-    min-height: 500px;
-    margin: 0 auto;
+    min-height: 80%;
 }
 
 .header {
     grid-row: 1 / 2;
     grid-column: 1 / 4;
     background-color: white;
-    display: grid;
     padding: 10px;
-    grid-template-columns: 3fr 6fr 3fr;
     margin: 0 10px;
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
 }
@@ -103,7 +106,6 @@ h1{
 .header .middle {
     grid-column: 2 / 3;
     text-align: center;
-    margin-top: 10px;
 }
 
 .middle h1{
@@ -164,7 +166,7 @@ h1{
   }
 
 .link{
-    background-color: rgb(76, 130, 175);
+    background-color: rgb(72, 141, 246);
     height: 20%;
     font-size: 20px;
     font-weight: bold;
@@ -209,7 +211,7 @@ h1{
 }
 
 .chat-message .join{
-    color: rgb(93, 224, 104);
+    color: rgb(71, 178, 80);
     font-weight: bold;
 }
 
@@ -278,7 +280,7 @@ h1{
 }
 
 .button:hover {
-  background-color: #45a049;
+  background-color: #2ca032;
 }
 
 

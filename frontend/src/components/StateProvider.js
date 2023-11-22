@@ -7,9 +7,9 @@ export const StateProvider = ({ children }) => {
   const [player, setPlayer] = useState();
   const [roomId, setRoomId] = useState();
   const [roomName, setRoomName] = useState(''); // Add setter for roomName
-  const [rounds, setRounds] = useState(2); // Add setter for rounds
+  const [rounds, setRounds] = useState(10); // Add setter for rounds
   const [guessTime, setGuessTime] = useState(60); // Add setter for guessTime
-  const [maxPlayers, setMaxPlayers] = useState(2); // Add setter for maxPlayers
+  const [maxPlayers, setMaxPlayers] = useState(8); // Add setter for maxPlayers
   const [category, setCategory] = useState('General Knowledge'); // Add setter for category
   const [difficulty, setDifficulty] = useState('medium'); // Add setter for difficulty
 
