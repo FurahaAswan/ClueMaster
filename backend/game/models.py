@@ -9,7 +9,7 @@ class Room(models.Model):
         max_length=40,
         primary_key=True,
     )
-    name = models.CharField(max_length=50, default=f'UNAMED ROOM')
+    name = models.CharField(max_length=50, default='Unnamed Room')
     created_at = models.DateTimeField(auto_now_add=True)
     rounds = models.PositiveIntegerField(default=2)
     guess_time = models.PositiveIntegerField(default=60)

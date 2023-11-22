@@ -84,12 +84,15 @@ h1{
     grid-row: 1 / 2;
     grid-column: 1 / 4;
     background-color: white;
+    display: grid;
     padding: 10px;
+    grid-template-columns: 3fr 6fr 3fr;
     margin: 0 10px;
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
 }
 
 .header .left {
+    grid-column: 1/2;
     height: 100%;
     display: flex;
     flex-direction: row;
@@ -106,6 +109,7 @@ h1{
 .header .middle {
     grid-column: 2 / 3;
     text-align: center;
+    margin-top: 10px;
 }
 
 .middle h1{
@@ -144,13 +148,21 @@ h1{
     flex-direction: column;
     padding: 20px;
     justify-content: center;
-    align-items: center;
+}
+
+.clue{
+    margin-bottom: 20px;
 }
 
 .options{
-    margin-top: auto;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
+    width: 60%;
+}
+
+.loading{
+    margin: 0 auto;
 }
 
 .start{

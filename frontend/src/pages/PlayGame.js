@@ -201,14 +201,16 @@ const PlayGame = ()=> {
             <div className='clue-board'>
                 {
                     loading ? 
+                        <div className='loading'>
                         <l-ring-2
-                        size="40"
+                        size="50"
                         stroke="5"
                         stroke-length="0.25"
                         bg-opacity="0.1"
                         speed="0.8" 
                         color="black" 
                         ></l-ring-2>
+                        </div>
                     :
                     clues.map((clue, index) => (
                         <h1 key={index} className='clue'>{index+1}. {clue}</h1>

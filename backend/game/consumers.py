@@ -69,18 +69,20 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
+        self.players = await self.get_all_players()
         #Delete player from db
         if self.player:
             await database_sync_to_async(self.player.delete)()
             if self.player.is_host and len(self.players) > 1:
                 await self.select_host()
 
-        if len(self.players) == 0:
+        if len(self.players) == 1:
             await database_sync_to_async(self.room.delete)()
             if self.game:
                 self.game.cancel()
+                print('Game Cancelled')
             await self.close()
-        elif len(self.players) > 0:
+        elif len(self.players) > 1:
             await self.channel_layer.group_send(
             self.room_group_name, {
                 'type': 'player_leave',
@@ -134,7 +136,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         answers = []
         for i in range(self.room.rounds):
-            print(i)
             random_word = random.choice(trivia_data)
             if random_word not in answers:
                 answers.append(random_word)
@@ -354,6 +355,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             or event['expiration_timestamp'] != self.calculate_expiration_timestamp() 
             or event['word_to_guess'] != self.build_word_to_guess()
             or old_game != self.game
+            or self.calculate_expiration_timestamp()
         ):
 
             await self.send(text_data=json.dumps({
