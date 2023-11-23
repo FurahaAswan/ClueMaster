@@ -9,8 +9,8 @@ services:
     restart: always 
     volumes:
       - static:/static
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
     networks:
       - cluemaster
     depends_on:
