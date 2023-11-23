@@ -14,8 +14,8 @@ export const StateProvider = ({ children }) => {
   const [difficulty, setDifficulty] = useState('medium'); // Add setter for difficulty
 
   const client = axios.create({
-    // baseURL: `http://${window.location.host}`
-    baseURL: 'http://localhost:8000'
+    baseURL: `http://${window.location.host}`
+    // baseURL: 'http://localhost:8000'
   });
 
   return (
