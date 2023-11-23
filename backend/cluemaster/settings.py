@@ -16,8 +16,8 @@ from dotenv import load_dotenv
 
 from pathlib import Path
 
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
+# dotenv_path = join(dirname(__file__), '.env')
+# load_dotenv(dotenv_path)
 load_dotenv()
 
 # SECURE_SSL_REDIRECT = True

@@ -5,8 +5,8 @@ from openai import AsyncOpenAI
 from pathlib import Path
 import asyncio
 
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
+# dotenv_path = join(dirname(__file__), '.env')
+# load_dotenv(dotenv_path)
 load_dotenv()
 
 client = AsyncOpenAI()
