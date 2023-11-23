@@ -1,8 +1,89 @@
 version: '3.9'
 
 services:
-  django:
-    image: django-docker:0.0.1
-    build: .
+  backend:
+    build: 
+      context: ./backend
     ports:
-      - "3000:8000"
+      - '8001:8000'
+    restart: always 
+    volumes:
+      - static:/static
+    env_file:
+      - .env
+    networks:
+      - cluemaster
+    depends_on:
+      - cache
+      - db
+  frontend:
+    build: 
+      context: ./frontend
+    volumes:
+      - frontend:/app/build
+    networks:
+      - cluemaster
+  cache:
+    image: redis:latest
+    restart: always
+    ports:
+      - '6379:6379'
+    command: "redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}"
+    volumes: 
+      - cache:/data
+    networks:
+      - cluemaster
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=${DB_USER}
+    ports:
+      - '5432:5432'
+    networks:
+      - cluemaster
+    volumes:
+      - db_data:/var/lib/postgresql
+  db-admin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${ADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${ADMIN_PASSWORD}
+      - PGADMIN_LISTEN_PORT=5050
+    ports:
+      - '5050:5050'
+    networks:
+      - cluemaster
+    volumes:
+      - db_admin_data:/var/lib/pgadmin
+  nginx:
+    build: 
+      context: ./nginx
+    volumes:
+      - static:/static
+      - frontend:/var/www/frontend
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    depends_on:
+      - frontend
+      - backend
+    networks:
+     - cluemaster
+volumes:
+  cache:
+    driver: local
+  static:
+  frontend: 
+  db_data:
+  db_admin_data:
+networks:
+  cluemaster:
+    driver: bridge
+
