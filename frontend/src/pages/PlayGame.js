@@ -4,6 +4,10 @@ import { StateContext } from '../components/StateProvider';
 import '../styles/game.css';
 import clipboard from 'clipboard-copy';
 import { ring2 } from 'ldrs'
+import correctSound from '../audio/correct.mp3';
+import joinSound from '../audio/join.mp3';
+import leaveSound from '../audio/leave.mp3';
+
 ring2.register()
 
 const PlayGame = ()=> {
@@ -19,7 +23,7 @@ const PlayGame = ()=> {
         category, 
         difficulty 
     } = useContext(StateContext);
-    const [timer, setTimer] = useState(guessTime);
+    const [timer, setTimer] = useState(0);
     const [guess, setGuess] = useState('')
     const navigate = useNavigate();
     const socketRef = useRef(null);
@@ -97,9 +101,15 @@ const PlayGame = ()=> {
                 console.log('Received guess:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
                 messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+                if (data.is_correct){
+                    let audio = new Audio(correctSound);
+                    audio.play();
+                }
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
+                let audio = new Audio(joinSound);
+                audio.play();
             } else if (data.type === 'host_update') {
                 console.log('host_update',data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
@@ -109,12 +119,16 @@ const PlayGame = ()=> {
                 setClues(data.clues)
                 setWordToGuess(data.word_to_guess);
                 setHost(data.host); // Ensure that 'host' is not null
-                setTimer(data.unix_time);
+                if(data.unix_time){
+                    setTimer(data.unix_time);
+                }
                 setTimeStamp(data.expiration_timestamp);
                 setGameActive(data.game_active);
                 setLoading(data.loading_state);
             } else if (data.type === 'player_leave') {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
+                let audio = new Audio(leaveSound);
+                audio.play();
             }
         }
 
@@ -219,7 +233,7 @@ const PlayGame = ()=> {
                 {
                     !loading &&
                     <div className={host && player && host.id === player.id ? 'options' : 'hide'}>
-                    {!gameActive && 
+                    {!gameActive && clues.length === 0 && 
                         <div className='update-container'>
                         <form className='form-container' onSubmit={handleSubmit}>
                           <label className='label'>
@@ -229,13 +243,13 @@ const PlayGame = ()=> {
                           <label className='label'>
                             Rounds:
                             <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
-                              {generateOptions(10,50,1)}
+                              {generateOptions(5,50,1)}
                             </select>
                           </label>
                           <label className='label'>
                             Guess Time:
                             <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='input-field' required>
-                              {generateOptions(60,200,10)}
+                              {generateOptions(40,200,10)}
                             </select>
                           </label>
                           <label className='label'>
@@ -284,7 +298,7 @@ const PlayGame = ()=> {
                     chatlog.map((message, index) => (
                         <div key={index} className={index % 2 === 0 ? 'chat-message' : 'chat-message alt'}>
                             {message.type === 'host_update' ? 
-                                <p className='host'>message.host.name + ' is the room host'</p> 
+                                <p className='host'>{message.text}</p> 
                             : message.type === 'player_join' ? 
                                 <p className='join'> {message.name} joined the room!</p> 
                             : message.type === 'guess' ? 

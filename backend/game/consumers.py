@@ -24,7 +24,10 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-        await self.initialize_game()
+        await self.initialize_game_state()
+
+        if not self.player and not self.room:
+            await self.close()
 
         if not self.host:
             await self.select_host()
@@ -32,7 +35,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.handle_join()
 
         
-    async def initialize_game(self):
+    async def initialize_game_state(self):
         self.room = await self.get_room()
         self.player = await self.get_player()
         self.host = await self.get_host()
@@ -41,11 +44,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.timer = self.current_round.time_left if self.current_round else self.room.guess_time
         self.is_correct = False
         self.clues = await self.get_clues()
-        
 
-        if not (self.player and self.room):
-            await self.close()
-            return
     
     async def handle_join(self):
         await self.channel_layer.group_send(
@@ -69,20 +68,27 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        
         self.players = await self.get_all_players()
+
         #Delete player from db
         if self.player:
             await database_sync_to_async(self.player.delete)()
             if self.player.is_host and len(self.players) > 1:
                 await self.select_host()
 
-        if len(self.players) == 1:
+        if len(self.players) == 0:
             await database_sync_to_async(self.room.delete)()
             if self.game:
                 self.game.cancel()
                 print('Game Cancelled')
-            await self.close()
-        elif len(self.players) > 1:
+
+        elif len(self.players) > 0:
             await self.channel_layer.group_send(
             self.room_group_name, {
                 'type': 'player_leave',
@@ -90,11 +96,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             })
             await self.update_game_state()
         
-        # Leave room group
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.close()
         
     async def player_leave(self, event):
         # Send game state to the connected clients
@@ -289,13 +291,28 @@ class GameConsumer(AsyncWebsocketConsumer):
             'id': event['id'],
         }))  
 
-    async def select_host(self):   
+    async def select_host(self):
+        self.players = await self.get_all_players()   
+        print('Selecting host from: ', [player.name for player in self.players])
         new_host = random.choice(self.players)
-        new_host = await database_sync_to_async(Player.objects.get)(id = new_host.id)
         new_host.is_host = True
         await database_sync_to_async(new_host.save)()
+        self.host = new_host
+
+        await self.channel_layer.group_send(
+                self.room_group_name,
+        {
+            'type': 'host_update',
+            'text': f'{new_host.name} is now the room owner'
+        })
 
         await self.update_game_state()
+    
+    async def host_update(self,event):
+        await self.send(text_data=json.dumps({
+            'type': 'host_update',
+            'text': event['text'],
+        }))  
     
     async def update_game_state(self):
         expiration_timestamp = self.calculate_expiration_timestamp()
@@ -308,7 +325,47 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'game_state',
             'word_to_guess': word_to_guess,
             'expiration_timestamp': expiration_timestamp,
+            'game_active': True if self.game else False,
+            'players': [{'id': player.id, 'player_name': player.name, 'score': player.score} for player in self.players],
+            'host': {'id': self.host.id, 'name': self.host.name} if self.host else None
         })
+    
+    async def game_state(self, event):
+        old_room = self.room
+        old_host = self.host
+        old_players = self.players
+        old_current_round = self.current_round
+        old_is_correct = False
+        old_clues = self.clues
+
+        #update game state
+        await self.initialize_game_state()
+
+        if (
+            old_room != self.room
+            or old_host == self.host
+            or old_players != self.players
+            or old_current_round != self.current_round
+            or old_is_correct != self.is_correct
+            or old_clues != self.clues
+            or event['expiration_timestamp'] != None
+            or event['word_to_guess'] != self.build_word_to_guess()
+        ):
+
+            await self.send(text_data=json.dumps({
+                'type': 'game_state',
+                'player_name': self.player.name if self.player else None,
+                'player_id': self.player.id if self.player else None,
+                'word_to_guess': event['word_to_guess'],
+                'clues': self.clues,
+                'players': event['players'],
+                'host': event['host'],
+                'expiration_timestamp': event['expiration_timestamp'],
+                'game_active': event['game_active'],
+                'loading_state': self.loading
+            }))
+        
+        return
     
     def build_word_to_guess(self):
         word_to_guess = ''
@@ -317,6 +374,10 @@ class GameConsumer(AsyncWebsocketConsumer):
                 for letter in self.current_round.word:
                     if letter != ' ':
                         word_to_guess += '_ '
+                    elif letter == "'":
+                        word_to_guess += "'"
+                    elif letter == '-':
+                        word_to_guess += '-'
                     else:
                         word_to_guess += '  '
             else:
@@ -328,50 +389,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             return int((self.current_round.created_at + timedelta(seconds=self.room.guess_time)).timestamp())
         return None
     
-    async def game_state(self, event):
-        old_room = self.room
-        old_player = self.player
-        old_host = self.host
-        old_players = self.players
-        old_current_round = self.current_round
-        old_timer = self.current_round.time_left if self.current_round else self.room.guess_time
-        old_is_correct = False
-        old_clues = self.clues
-        old_game = self.game
-
-
-        #update game state
-        await self.initialize_game()
-
-        if (
-            old_room != self.room
-            or old_player != self.player
-            or old_host == self.host
-            or old_players != self.players
-            or old_current_round != self.current_round
-            or old_timer != self.timer
-            or old_is_correct != self.is_correct
-            or old_clues != self.clues
-            or event['expiration_timestamp'] != self.calculate_expiration_timestamp() 
-            or event['word_to_guess'] != self.build_word_to_guess()
-            or old_game != self.game
-            or self.calculate_expiration_timestamp()
-        ):
-
-            await self.send(text_data=json.dumps({
-                'type': 'game_state',
-                'player_name': self.player.name if self.player else None,
-                'player_id': self.player.id if self.player else None,
-                'word_to_guess': event['word_to_guess'],
-                'clues': self.clues,
-                'players': [{'id': player.id, 'player_name': player.name, 'score': player.score} for player in self.players],
-                'host': {'id': self.host.id, 'name': self.host.name} if self.host else None,
-                'expiration_timestamp': event['expiration_timestamp'],
-                'game_active': True if self.game else False,
-                'loading_state': self.loading
-            }))
-        
-        return
     
     async def send_loading_state(self):
         await self.channel_layer.group_send(

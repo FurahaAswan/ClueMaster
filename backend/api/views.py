@@ -16,8 +16,6 @@ def createRoom(request):
 def joinRoom(request, room_id):
     room = Room.objects.get(id=room_id)
     request.data['room'] = room.id
-    if not Player.objects.filter(room=room.id).exists():
-        request.data['is_host'] = True
     player_serializer = PlayerSerializer(data=request.data)
     
     if player_serializer.is_valid():
