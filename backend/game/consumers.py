@@ -82,7 +82,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             if self.player.is_host and len(self.players) > 1:
                 await self.select_host()
 
-        if len(self.players) == 0:
+        if len(self.players) == 1:
             await database_sync_to_async(self.room.delete)()
             if self.game:
                 self.game.cancel()
@@ -148,8 +148,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             # Create a new round
             await self.handle_round(answer)
 
-            #Wait for 10 seconds in between rounds
-            await asyncio.sleep(2)
+            #Wait for 5 seconds in between rounds
+            await asyncio.sleep(5)
                 
         # Game over or any other logic after the rounds
         self.game = None
@@ -160,22 +160,28 @@ class GameConsumer(AsyncWebsocketConsumer):
             player.score = 0
             await database_sync_to_async(player.save)()
         
+        await self.send_game_over()
+        await asyncio.sleep(5)
         await self.update_game_state()
-        print("Game Over")
+    
+    async def send_game_over(self):
+        await self.channel_layer.group_send(
+                self.room_group_name,
+        {
+            'type': 'game_over',
+        })
+    
+    async def game_over(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'game_over',
+            'game_over': True
+        }))
 
 
     async def handle_round(self, word_to_guess):
         self.loading = True
         await self.send_loading_state()
         # Create a new round
-        self.current_round = await database_sync_to_async(Round.objects.create)(
-            word=word_to_guess, 
-            time_left=self.room.guess_time, 
-            room=self.room,
-        )
-
-        await database_sync_to_async(self.current_round.save)()
-
         clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty)
         clues = json.loads(clues)
         clues = clues['clues']
@@ -187,14 +193,21 @@ class GameConsumer(AsyncWebsocketConsumer):
         clues = checked_clues
         
         print(f'Clues for {word_to_guess}: ', clues)
+
+        self.current_round = await database_sync_to_async(Round.objects.create)(
+            word=word_to_guess, 
+            time_left=self.room.guess_time, 
+            room=self.room,
+        )
+
         #clues = ['Clue 1', 'Clue 2 ', 'Clue 3']
         await database_sync_to_async(Clue.objects.create)(text = clues[0], game_round = self.current_round)
 
-        # Send timer information to the client based on self.room.guess_time
-        await self.update_game_state()
-
         self.loading =  False
+        await self.update_game_state()
         await self.send_loading_state()
+
+        # Send timer information to the client based on self.room.guess_time
         
         for time_left in range(self.current_round.time_left, 0, -1):
             self.current_round.time_left = time_left
@@ -223,7 +236,21 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.current_round.is_active = False
         await database_sync_to_async(self.current_round.save)()
         await self.update_game_state()
- 
+        await self.send_round_over()
+    
+    async def send_round_over(self):
+        await self.channel_layer.group_send(
+                self.room_group_name,
+        {
+            'type': 'round_over',
+        })
+    
+    async def round_over(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'round_over',
+            'round_over': True
+        }))
+
 
     # Handle player guess
     async def handle_guess(self, guess_text, time):
@@ -372,7 +399,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if self.current_round:
             if self.current_round.is_active:
                 for letter in self.current_round.word:
-                    if letter != ' ':
+                    if letter.isalpha():
                         word_to_guess += '_ '
                     elif letter == "'":
                         word_to_guess += "'"
@@ -384,9 +411,10 @@ class GameConsumer(AsyncWebsocketConsumer):
                 word_to_guess = self.current_round.word
         return word_to_guess
 
+
     def calculate_expiration_timestamp(self):
         if self.current_round and self.current_round.is_active:
-            return int((self.current_round.created_at + timedelta(seconds=self.room.guess_time)).timestamp())
+            return int((self.current_round.created_at + timedelta(seconds=self.room.guess_time)).timestamp()) + 1
         return None
     
     

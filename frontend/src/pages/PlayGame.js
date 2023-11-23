@@ -7,6 +7,8 @@ import { ring2 } from 'ldrs'
 import correctSound from '../audio/correct.mp3';
 import joinSound from '../audio/join.mp3';
 import leaveSound from '../audio/leave.mp3';
+import GameOver from '../components/GameOver';
+import RoundOver from '../components/RoundOver';
 
 ring2.register()
 
@@ -45,7 +47,8 @@ const PlayGame = ()=> {
     const messagesRef = useRef(null);
     const [loading, setLoading] = useState(true);
 
-   
+    const [isGameOver, setisGameOver] = useState(false);
+    const [isRoundOver, setisRoundOver] = useState(false);
 
     // Default values shown
 
@@ -129,8 +132,28 @@ const PlayGame = ()=> {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
                 let audio = new Audio(leaveSound);
                 audio.play();
+            } else if (data.round_over) {
+                console.log('Round Over')
+                setisRoundOver(true); 
+            } else if (data.game_over) {
+                console.log('Game Over');
+                setisGameOver(true);
             }
         }
+
+        useEffect(() => {
+            const interval = setInterval(() => {
+                if (isGameOver) {
+                    setisGameOver(false);
+                }
+                if (isRoundOver) {
+                    setisRoundOver(false);
+                }
+            }, 5000);
+        
+            return () => clearInterval(interval);
+        }, [isGameOver, isRoundOver]);
+        
 
         function startRound() {
             if (socketRef.current.readyState === WebSocket.OPEN) {
@@ -202,7 +225,16 @@ const PlayGame = ()=> {
         
 
     return (
-        <div className='game-container'>
+            <div>
+            { isGameOver ?
+                <GameOver winners={players.sort((a, b) => {
+                    return a.score - b.score;
+                }).slice(0,3)}></GameOver>
+            : 
+                isRoundOver ?
+                    <RoundOver word={wordToGuess}></RoundOver>
+            :
+            <div className='game-container'>
             <div className='header'>
                 <div className='left'>
                     <h1 className='timer'>{timer}</h1>
@@ -230,12 +262,8 @@ const PlayGame = ()=> {
                         <h1 key={index} className='clue'>{index+1}. {clue}</h1>
                     ))
                 }
-                {
-                    !loading &&
-                    <div className={host && player && host.id === player.id ? 'options' : 'hide'}>
-                    {!gameActive && clues.length === 0 && 
-                        <div className='update-container'>
-                        <form className='form-container' onSubmit={handleSubmit}>
+                    {!loading && !gameActive && clues.length === 0 && 
+                        <form className={host && player && host.id === player.id ? 'host-options' : 'hide'} onSubmit={handleSubmit}>
                           <label className='label'>
                             Room Name:
                             <input type="text" name="name" value={formData.name} onChange={handleChange} className='input-field' required />
@@ -243,13 +271,13 @@ const PlayGame = ()=> {
                           <label className='label'>
                             Rounds:
                             <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
-                              {generateOptions(5,50,1)}
+                              {generateOptions(1,50,1)}
                             </select>
                           </label>
                           <label className='label'>
                             Guess Time:
                             <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='input-field' required>
-                              {generateOptions(40,200,10)}
+                              {generateOptions(10,200,10)}
                             </select>
                           </label>
                           <label className='label'>
@@ -274,23 +302,20 @@ const PlayGame = ()=> {
                               <option value="expert">Expert</option>
                             </select>
                           </label>
-                          <button className='link' type='button' onClick={copyInviteLink}>Click to get Invite Link</button>
-                          <button className='start' type='submit'>Start</button>
+                          <button className='link options-button' type='button' onClick={copyInviteLink}>Click to get Invite Link</button>
+                          <button className='start options-button' type='submit'>Start</button>
                         </form>
-                      </div>
-                    }
-                </div>
-                }
+            }
             </div>
             <div className='scoreboard'>
-                {
-                    players.map((activePlayer, index) => (
+                    {players
+                        .sort((a, b) => (a.id === player.id ? -1 : b.id === player.id ? 1 : 0))
+                        .map((activePlayer, index) => (
                         <div className='player' key={index}>
-                            <h1>{activePlayer.id === player.id ? activePlayer.player_name+' (You)' : activePlayer.player_name}</h1>
-                            <h1 className='score'>{activePlayer.score}</h1>
+                        <h1 className='name'>{activePlayer.id === player.id ? activePlayer.player_name + ' (You)' : activePlayer.player_name}</h1>
+                        <h1 className='score'>{activePlayer.score}</h1>
                         </div>
-                    ))
-                }
+                    ))}
             </div>
             <div className='player-chat'>
                 <div ref={messagesRef} className='messages'>
@@ -316,6 +341,8 @@ const PlayGame = ()=> {
                     <input type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} required/>
                 </form>
             </div>
+        </div>
+        }
         </div>
     )
 };
