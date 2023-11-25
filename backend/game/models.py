@@ -20,15 +20,15 @@ class Room(models.Model):
     EASY = 'easy'
     MEDIUM = 'medium'
     HARD = 'hard'
-    ENTHUSIAST = 'enthusiast'
+    PAIN = 'pain'
     EXPERT = 'expert'
 
     DIFFICULTY_CHOICES = (
         (EASY, 'Easy'),
         (MEDIUM, 'Medium'),
         (HARD, 'Hard'),
-        (ENTHUSIAST, 'Enthusiast'),
-        (EXPERT, 'Expert'), 
+        (EXPERT, 'Expert'),
+        (PAIN, 'Pain'), 
     )
 
     difficulty = models.CharField(max_length=50, choices=DIFFICULTY_CHOICES, default="medium")

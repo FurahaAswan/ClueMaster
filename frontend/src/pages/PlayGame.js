@@ -271,13 +271,13 @@ const PlayGame = ()=> {
                           <label className='label'>
                             Rounds:
                             <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
-                              {generateOptions(1,50,1)}
+                              {generateOptions(5,50,1)}
                             </select>
                           </label>
                           <label className='label'>
                             Guess Time:
                             <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='input-field' required>
-                              {generateOptions(10,200,10)}
+                              {generateOptions(30,200,10)}
                             </select>
                           </label>
                           <label className='label'>
@@ -289,6 +289,7 @@ const PlayGame = ()=> {
                           {/* Add category field */}
                           <label className='label'>
                             Category:
+
                             <input type="text" name="category" value={formData.category} onChange={handleChange} className='input-field' required />
                           </label>
                           {/* Add difficulty field */}
@@ -298,8 +299,8 @@ const PlayGame = ()=> {
                               <option value="easy">Easy</option>
                               <option value="medium">Medium</option>
                               <option value="hard">Hard</option>
-                              <option value="enthusiast">Enthusiast</option>
                               <option value="expert">Expert</option>
+                              <option value="pain">Pain</option>
                             </select>
                           </label>
                           <button className='link options-button' type='button' onClick={copyInviteLink}>Click to get Invite Link</button>

@@ -131,10 +131,15 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_loading_state()
             return
         
-        trivia_data = await bot.get_words(self.room.category,self.room.rounds, self.room.difficulty)
-        print('Words: ', trivia_data)
-        trivia_data = json.loads(trivia_data)
-        trivia_data = trivia_data['trivia_answers']
+        try:
+            trivia_data = await bot.get_words(self.room.category, self.room.rounds, self.room.difficulty)
+            print('Words: ', trivia_data)
+            trivia_data = json.loads(trivia_data)
+            trivia_data = trivia_data['trivia_answers']
+        except Exception as e:
+            print(f"Error in get_words: {e}")
+            # Handle the exception appropriately (e.g., logging, error response)
+
 
         answers = []
         for i in range(self.room.rounds):
@@ -181,10 +186,14 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def handle_round(self, word_to_guess):
         self.loading = True
         await self.send_loading_state()
+
         # Create a new round
-        clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty)
-        clues = json.loads(clues)
-        clues = clues['clues']
+        try: 
+            clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty, self.room.guess_time//15 -1)
+            clues = json.loads(clues)
+            clues = clues['clues']
+        except Exception as e:
+            print(f"Error in get_words: {e}")
 
         checked_clues = []
         for clue in clues:

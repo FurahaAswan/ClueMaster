@@ -76,7 +76,6 @@ h1{
     grid-template-columns: 3fr 6fr 3fr;
     grid-template-rows: 70px 1fr;
     min-width: 800px; 
-    box-sizing: border-box;
     min-height: 500px;
 }
 
@@ -87,7 +86,7 @@ h1{
     display: grid;
     padding: 10px;
     grid-template-columns: 3fr 6fr 3fr;
-    margin: 0 10px;
+    border-bottom: 0.01em solid #d0d0d0;;
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
 }
 
@@ -118,7 +117,7 @@ h1{
 }
 
 .scoreboard {
-    margin: 10px;
+    border-right: 0.01em solid #d0d0d0;
     background-color: white;
     grid-row: 2 / 3;
     grid-column: 1 / 2;
@@ -151,7 +150,6 @@ h1{
 }
 
 .clue-board{
-    margin: 10px 0;
     background-color: white;
     grid-row: 2 / 3;
     grid-column: 2 / 3;
@@ -171,7 +169,7 @@ h1{
 }
 
 .player-chat {
-    margin: 10px;
+    border-left: 0.01em solid #d0d0d0;
     background-color: white;
     grid-row: 2 / 3;
     grid-column: 3 / 4;
@@ -240,15 +238,15 @@ h1{
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     background-color: white;
     flex-direction: column;
-    width: 60%;
+    width: 70%;
     margin: 0 auto;
     max-height: 100%;
 }
   
   .label {
     display: block;
-    margin-bottom: 8px;
-    box-sizing: border-box;
+    margin-bottom: 10px;
+    font-weight: bold;
   }
   
   .input-field {
@@ -257,7 +255,6 @@ h1{
     margin-bottom: 5px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box;
   }
   
   .options-button {
