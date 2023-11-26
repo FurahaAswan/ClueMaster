@@ -39,7 +39,10 @@ CORS_ALLOWED_ORIGINS = json.loads(os.environ.get('ALLOWED_ORIGINS'))
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
-    )
+    ), 
+    'DEFAULT_RENDERER_CLASSES': (
+         'rest_framework.renderers.JSONRenderer',
+     )
 }
 
 
