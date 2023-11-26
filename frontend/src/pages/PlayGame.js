@@ -18,7 +18,6 @@ const PlayGame = ()=> {
         client, 
         player, 
         roomId, 
-        setRoomId, 
         roomName, 
         setRoomName, 
         rounds, 
@@ -42,14 +41,6 @@ const PlayGame = ()=> {
     const [clues, setClues] = useState([]);
     const [host, setHost] = useState();
     const [gameActive, setGameActive] = useState(false);
-    const [formData, setFormData] = useState({
-        name: roomName,
-        rounds: rounds,
-        guess_time: guessTime,
-        max_players: maxPlayers,
-        category: category, // Add category field
-        difficulty: difficulty, // Add difficulty field with default value
-      });
     const [timeStamp, setTimeStamp] = useState(0);
     const messagesRef = useRef(null);
     const [loading, setLoading] = useState(true);
@@ -213,6 +204,14 @@ const PlayGame = ()=> {
         const handleSubmit = async (e) => {
             try {
                 e.preventDefault();
+                const formData = {
+                    name: roomName,
+                    rounds: rounds,
+                    guess_time: guessTime,
+                    max_players: maxPlayers,
+                    category: category, // Add category field
+                    difficulty: difficulty, // Add difficulty field with default value
+                };
                 console.log('Form Data', formData)
                 if (host && player && host.id === player.id){
                     const response = await client.put(`api/room/update/${roomId}`, formData);
