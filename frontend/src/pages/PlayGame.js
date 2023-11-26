@@ -44,9 +44,11 @@ const PlayGame = ()=> {
     const [timeStamp, setTimeStamp] = useState(0);
     const messagesRef = useRef(null);
     const [loading, setLoading] = useState(true);
+    const [roundNumber, setRoundNumber] = useState();
 
     const [isGameOver, setisGameOver] = useState(false);
     const [isRoundOver, setisRoundOver] = useState(false);
+    const correctSoundPlayed = useRef(false);
 
     // Default values shown
 
@@ -101,9 +103,11 @@ const PlayGame = ()=> {
                 console.log('Received guess:', data);
                 setChatLog(prevChatLog => [...prevChatLog, data]);
                 messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-                if (data.is_correct){
+                if (data.is_correct && !correctSoundPlayed.current){
+                    console.log(correctSoundPlayed)
                     let audio = new Audio(correctSound);
                     audio.play();
+                    correctSoundPlayed.current = true;
                 }
             } else if (data.type === 'player_join') {
                 console.log('Player joined:', data);
@@ -130,6 +134,7 @@ const PlayGame = ()=> {
                 setRounds(data.rounds);
                 setDifficulty(data.room_difficulty);
                 setGuessTime(data.guess_time);
+                setRoundNumber(data.round_number);
             } else if (data.type === 'player_leave') {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
                 let audio = new Audio(leaveSound);
@@ -152,6 +157,7 @@ const PlayGame = ()=> {
                 }
                 if (isRoundOver) {
                     setisRoundOver(false);
+                    correctSoundPlayed.current = false;
                 }
             }, 5000);
         
@@ -255,7 +261,7 @@ const PlayGame = ()=> {
             <div className='header'>
                 <div className='left'>
                     <h1 className='timer'>{timer}</h1>
-                    <h1 className='round-number'>Round #</h1>
+                    <h1 className='round-number'>Round {roundNumber} or {rounds}</h1>
                 </div>
                 <div className='middle'>
                     <h1>{wordToGuess}</h1>

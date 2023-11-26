@@ -35,7 +35,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.select_host()
 
         await self.handle_join()
-
         
     async def initialize_game_state(self):
         self.room = await self.get_room()
@@ -48,6 +47,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             self.timer = self.current_round.time_left if self.current_round else self.room.guess_time
         self.is_correct = False
         self.clues = await self.get_clues()
+        self.round_number = await self.get_round_number()
 
     
     async def handle_join(self):
@@ -126,11 +126,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             message_type = data['type']
 
             # Check for spam
+            print('RECEIVED', data)
+
             if await self.check_spam():
                 await self.warning("You are sending messages too quickly. Please slow down or you will be kicked.")
                 return
-
-            print('RECEIVED', data)
 
             if message_type == 'guess':
                 await self.handle_guess(data['text'], data['time'])
@@ -322,10 +322,9 @@ class GameConsumer(AsyncWebsocketConsumer):
     # Handle player guess
     async def handle_guess(self, guess_text, time):
         if self.room and self.player:
-            if self.current_round:
-                current_word = self.current_round.word
+            if self.current_round and not self.player.is_correct: 
 
-                if guess_text.lower() == current_word.lower():
+                if guess_text.strip().lower() == self.current_round.word.strip().lower():
 
                     time_taken = self.room.guess_time - int(self.calculate_expiration_timestamp() - time)
                     time_weight = 0.8
@@ -352,16 +351,18 @@ class GameConsumer(AsyncWebsocketConsumer):
 
                     self.player.is_correct = True
                     self.player.score += player_score
-                    await database_sync_to_async(self.player.save)()
-                    await self.update_game_state()
-                    await self.send(text_data=json.dumps({
-                        'type': 'guess',
-                        'text': guess_text,
-                        'player_name': self.player.name,
-                        'is_correct': True,
-                        'id': self.player.id,
-                    })) 
-                    return
+            
+            if self.player.is_correct:
+                await database_sync_to_async(self.player.save)()
+                await self.update_game_state()
+                await self.send(text_data=json.dumps({
+                    'type': 'guess',
+                    'text': guess_text,
+                    'player_name': self.player.name,
+                    'is_correct': True,
+                    'id': self.player.id,
+                })) 
+                return
 
             # Broadcast the guess to the room
             await self.channel_layer.group_send(
@@ -422,7 +423,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'expiration_timestamp': expiration_timestamp,
             'game_active': True if self.game else False,
             'players': [{'id': player.id, 'player_name': player.name, 'score': player.score} for player in self.players],
-            'host': {'id': self.host.id, 'name': self.host.name} if self.host else None
+            'host': {'id': self.host.id, 'name': self.host.name} if self.host else None,
         })
     
     async def game_state(self, event):
@@ -466,6 +467,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'room_name': self.room.name,
                 'guess_time': self.room.guess_time,
                 'rounds': self.room.rounds,
+                'round_number': self.round_number if self.round_number else 0
             }))
         
         return
@@ -477,14 +479,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 for letter in self.current_round.word:
                     if letter.isalpha():
                         word_to_guess += '_ '
-                    elif letter == "'":
-                        word_to_guess += "'"
-                    elif letter == '-':
-                        word_to_guess += '-'
-                    elif letter == '.':
-                        word_to_guess += '.'
                     else:
-                        word_to_guess += '  '
+                        word_to_guess += letter
             else:
                 word_to_guess = self.current_round.word
         return word_to_guess
@@ -559,6 +555,14 @@ class GameConsumer(AsyncWebsocketConsumer):
             return Player.objects.get(room=self.room, is_host=True)
         except Player.DoesNotExist:
             return None
+    
+    @database_sync_to_async
+    def get_round_number(self):
+        try:
+            return len(Round.objects.filter(room = self.room))
+        except Round.DoesNotExist:
+            return None
+
                      
 
         
