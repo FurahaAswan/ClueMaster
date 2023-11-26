@@ -6,6 +6,9 @@ import asyncio
 import random
 import bot.bot as bot
 from datetime import timedelta
+import time
+
+active_game_task = {}
 
 
 class GameConsumer(AsyncWebsocketConsumer):
@@ -13,7 +16,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         self.player_id = self.scope['url_route']['kwargs']['player_id']
         self.room_group_name = f"room_{self.room_id}"
-        self.game = None
         self.loading = False
 
         # Join room group
@@ -38,10 +40,12 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def initialize_game_state(self):
         self.room = await self.get_room()
         self.player = await self.get_player()
+        self.game = active_game_task.get(self.room_id)
         self.host = await self.get_host()
         self.players = await self.get_all_players()
         self.current_round = await self.get_current_round()
-        self.timer = self.current_round.time_left if self.current_round else self.room.guess_time
+        if self.room:
+            self.timer = self.current_round.time_left if self.current_round else self.room.guess_time
         self.is_correct = False
         self.clues = await self.get_clues()
 
@@ -68,35 +72,38 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
+        #Delete player from db
+        if self.player:
+            print(' Removing player', self.player)
+            await database_sync_to_async(self.player.delete)()
+            if self.player.is_host and len(self.players) > 1:
+                await self.select_host()
+        
+        self.players = await self.get_all_players()
+
+        if len(self.players) < 1:
+            await database_sync_to_async(self.room.delete)()
+            if self.game:
+                self.game.cancel()
+                print('Game Cancelled')
+        elif len(self.players) > 0:
+            if close_code == 4001:
+                await self.send_warning(f'{self.player.name} has been kicked')
+            else: 
+                await self.channel_layer.group_send(
+                self.room_group_name, {
+                    'type': 'player_leave',
+                    'name': self.player.name
+                })
+
+        await self.update_game_state()
+
         # Leave room group
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        
-        self.players = await self.get_all_players()
 
-        #Delete player from db
-        if self.player:
-            await database_sync_to_async(self.player.delete)()
-            if self.player.is_host and len(self.players) > 1:
-                await self.select_host()
-
-        if len(self.players) == 1:
-            await database_sync_to_async(self.room.delete)()
-            if self.game:
-                self.game.cancel()
-                print('Game Cancelled')
-
-        elif len(self.players) > 0:
-            await self.channel_layer.group_send(
-            self.room_group_name, {
-                'type': 'player_leave',
-                'name': self.player.name
-            })
-            await self.update_game_state()
-        
-        await self.close()
         
     async def player_leave(self, event):
         # Send game state to the connected clients
@@ -106,30 +113,81 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
 
 
-    # Receive message from WebSocket
+    SPAM_WARNING_THRESHOLD = 3
+    SPAM_TIME_WINDOW = 2  # seconds
+    spam_tracker = {}
+
+    # Inside your GameConsumer class:
+
+    # Update the receive method to include spam handling
     async def receive(self, text_data):
-        data = json.loads(text_data)
-        message_type = data['type']
+        try:
+            data = json.loads(text_data)
+            message_type = data['type']
 
-        print('RECIEVED', data)
+            # Check for spam
+            if await self.check_spam():
+                await self.warning("You are sending messages too quickly. Please slow down or you will be kicked.")
+                return
 
-        if message_type == 'guess':
-            await self.handle_guess(data['text'], data['time'])
-        elif message_type == 'chat_message':
-            await self.handle_chat_message(data['text'])
-        elif message_type == "start_game":
-            self.game = asyncio.ensure_future(self.game_loop())
-        
+            print('RECEIVED', data)
+
+            if message_type == 'guess':
+                await self.handle_guess(data['text'], data['time'])
+            elif message_type == 'chat_message':
+                await self.handle_chat_message(data['text'])
+            elif message_type == "start_game":
+                # Ensure only the host can start the game
+                if not self.host or self.host.id != self.player.id:
+                    await self.warning('Only the host can start the game')
+                else:
+                    active_game_task[self.room_id] = asyncio.ensure_future(self.game_loop())
+                    self.game = active_game_task[self.room_id]
+        except Exception as e:
+            print('ERROR', e)
+
+    # Add a method to check for spam
+    async def check_spam(self):
+        now = time.time()
+
+        if self.player_id not in self.spam_tracker:
+            self.spam_tracker[self.player_id] = {'count': 1, 'timestamp': now}
+            return False
+
+        # Check if the time window has passed, reset the count
+        if now - self.spam_tracker[self.player_id]['timestamp'] > self.SPAM_TIME_WINDOW:
+            self.spam_tracker[self.player_id] = {'count': 1, 'timestamp': now}
+            return False
+
+        # Increment the count and check if it exceeds the threshold
+        self.spam_tracker[self.player_id]['count'] += 1
+        if self.spam_tracker[self.player_id]['count'] > self.SPAM_WARNING_THRESHOLD:
+            if self.spam_tracker[self.player_id]['count'] > self.SPAM_WARNING_THRESHOLD + 2:
+                await self.close(code=4001)
+
+            return True
+
+        return False
+
+    async def send_warning(self, message):
+        await self.channel_layer.group_send(
+                self.room_group_name,
+        {
+            'type': 'warning',
+            'message': message
+        })
+
+    # Add a method to send a warning
+    async def warning(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'warning',
+            'message': event if type(event) is str else event['message']
+        }))
     
     async def game_loop(self):
         self.loading = True
         await self.send_loading_state()
         self.room = await self.get_room()
-        # Ensure only the host can start the game
-        if not self.host or self.host.id != self.player.id:
-            self.loading = False
-            await self.send_loading_state()
-            return
         
         try:
             trivia_data = await bot.get_words(self.room.category, self.room.rounds, self.room.difficulty)
@@ -189,7 +247,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         # Create a new round
         try: 
-            clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty, self.room.guess_time//15 -1)
+            clues = await bot.get_clues(word_to_guess, self.room.category, self.room.difficulty, self.room.guess_time//15 -1 if self.room.guess_time <= 90 else 5)
             clues = json.loads(clues)
             clues = clues['clues']
         except Exception as e:
@@ -353,6 +411,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def update_game_state(self):
         expiration_timestamp = self.calculate_expiration_timestamp()
         word_to_guess = self.build_word_to_guess()
+        self.players = await self.get_all_players()
 
         # Send the game state to the player
         await self.channel_layer.group_send(
@@ -373,6 +432,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         old_current_round = self.current_round
         old_is_correct = False
         old_clues = self.clues
+        old_players = self.players
 
         #update game state
         await self.initialize_game_state()
@@ -386,6 +446,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             or old_clues != self.clues
             or event['expiration_timestamp'] != None
             or event['word_to_guess'] != self.build_word_to_guess()
+            or old_players != self.players
         ):
 
             await self.send(text_data=json.dumps({
@@ -398,7 +459,13 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'host': event['host'],
                 'expiration_timestamp': event['expiration_timestamp'],
                 'game_active': event['game_active'],
-                'loading_state': self.loading
+                'loading_state': self.loading,
+                'room_difficulty': self.room.difficulty,
+                'room_category': self.room.category,
+                'max_players': self.room.max_players,
+                'room_name': self.room.name,
+                'guess_time': self.room.guess_time,
+                'rounds': self.room.rounds,
             }))
         
         return
@@ -414,6 +481,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                         word_to_guess += "'"
                     elif letter == '-':
                         word_to_guess += '-'
+                    elif letter == '.':
+                        word_to_guess += '.'
                     else:
                         word_to_guess += '  '
             else:

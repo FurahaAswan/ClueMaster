@@ -16,6 +16,8 @@ def createRoom(request):
 def joinRoom(request, room_id):
     room = Room.objects.get(id=room_id)
     request.data['room'] = room.id
+    if len(Player.objects.filter(room=room_id)) >= Room.objects.get(id = room_id).max_players:
+        return Response({'message': 'The room is full'}, status=400)
     player_serializer = PlayerSerializer(data=request.data)
     
     if player_serializer.is_valid():
@@ -32,7 +34,7 @@ def updateRoom(request, room_id):
 
     if room_serializer.is_valid():
         room_serializer.save()
-        print('UPDATING ROOdM')
+        print('UPDATING ROOM')
         return Response(room_serializer.data)
 
     return Response(room_serializer.errors, status=400)

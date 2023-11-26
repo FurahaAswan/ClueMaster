@@ -15,15 +15,22 @@ ring2.register()
 const PlayGame = ()=> {
 
     const { 
-        client,
+        client, 
         player, 
         roomId, 
+        setRoomId, 
         roomName, 
+        setRoomName, 
         rounds, 
+        setRounds, 
         guessTime, 
+        setGuessTime, 
         maxPlayers, 
+        setMaxPlayers, 
         category, 
-        difficulty 
+        setCategory, 
+        difficulty, 
+        setDifficulty
     } = useContext(StateContext);
     const [timer, setTimer] = useState(0);
     const [guess, setGuess] = useState('')
@@ -128,6 +135,11 @@ const PlayGame = ()=> {
                 setTimeStamp(data.expiration_timestamp);
                 setGameActive(data.game_active);
                 setLoading(data.loading_state);
+                setMaxPlayers(data.max_players);
+                setCategory(data.room_category);
+                setRounds(data.rounds);
+                setDifficulty(data.room_difficulty);
+                setGuessTime(data.guess_time);
             } else if (data.type === 'player_leave') {
                 setChatLog(prevChatLog => [...prevChatLog, data]);
                 let audio = new Audio(leaveSound);
@@ -138,6 +150,8 @@ const PlayGame = ()=> {
             } else if (data.game_over) {
                 console.log('Game Over');
                 setisGameOver(true);
+            } else if (data.type === 'warning'){
+                setChatLog(prevChatLog => [...prevChatLog, data]);
             }
         }
 
@@ -188,18 +202,23 @@ const PlayGame = ()=> {
             }
             return options;
         };
-
-        const handleChange = (e) => {
-            setFormData({ ...formData, [e.target.name]: e.target.value });
-        };
+        
+        useEffect(() =>{
+            if (host && player && host.id === player.id){
+                const response = client.put(`api/room/update/${roomId}`, {max_players: maxPlayers});
+                console.log(response.data)
+            }
+        }, [maxPlayers]);
 
         const handleSubmit = async (e) => {
             try {
                 e.preventDefault();
                 console.log('Form Data', formData)
-                const response = await client.put(`api/room/update/${roomId}`, formData);
-                console.log('Room Updated successfully:', response.data);
-                startRound();
+                if (host && player && host.id === player.id){
+                    const response = await client.put(`api/room/update/${roomId}`, formData);
+                    console.log('Room Updated successfully:', response.data);
+                    startRound();
+                }
             } catch (error) {
               console.error('Error creating room:', error);
             }
@@ -266,36 +285,36 @@ const PlayGame = ()=> {
                         <form className={host && player && host.id === player.id ? 'host-options' : 'hide'} onSubmit={handleSubmit}>
                           <label className='label'>
                             Room Name:
-                            <input type="text" name="name" value={formData.name} onChange={handleChange} className='input-field' required />
+                            <input type="text" name="name" value={roomName} onChange={(e) => {setRoomName(e.target.value)}} className='input-field' required />
                           </label>
                           <label className='label'>
                             Rounds:
-                            <select name="rounds" value={formData.rounds} onChange={handleChange} className='input-field' required>
+                            <select name="rounds" value={rounds} onChange={(e) => {setRounds(e.target.value)}} className='input-field' required>
                               {generateOptions(5,50,1)}
                             </select>
                           </label>
                           <label className='label'>
                             Guess Time:
-                            <select name="guess_time" value={formData.guess_time} onChange={handleChange} className='input-field' required>
+                            <select name="guess_time" value={guessTime} onChange={(e) => {setGuessTime(e.target.value)}} className='input-field' required>
                               {generateOptions(30,200,10)}
                             </select>
                           </label>
                           <label className='label'>
                             Max Players:
-                            <select name="max_players" value={formData.max_players} onChange={handleChange} className='input-field' required>
-                              {generateOptions(2,20,1)}
+                            <select name="max_players" value={maxPlayers} onChange={(e) => {setMaxPlayers(e.target.value)}} className='input-field' required>
+                              {generateOptions(players.length,20,1)}
                             </select>
                           </label>
                           {/* Add category field */}
                           <label className='label'>
                             Category:
 
-                            <input type="text" name="category" value={formData.category} onChange={handleChange} className='input-field' required />
+                            <input type="text" name="category" value={category} onChange={(e) => {setCategory(e.target.value)}} className='input-field' required />
                           </label>
                           {/* Add difficulty field */}
                           <label className='label'>
                             Difficulty:
-                            <select name="difficulty" value={formData.difficulty} onChange={handleChange} className='input-field' required>
+                            <select name="difficulty" value={difficulty} onChange={(e) => {setDifficulty(e.target.value)}} className='input-field' required>
                               <option value="easy">Easy</option>
                               <option value="medium">Medium</option>
                               <option value="hard">Hard</option>
@@ -331,6 +350,8 @@ const PlayGame = ()=> {
                                 <p><span className='name'>{message.player_name}:</span> <span style={message.is_correct ? {color: '#4caf50', fontWeight: 'bold'} : {}}>{message.text}</span></p>
                             : message.type === 'player_leave' ? 
                                 <p className='leave'>{message.name} left the room</p>
+                            : message.type === 'warning' ?
+                                <p className='leave'>{message.message}</p>
                             :
                                 <p>Unknown Message</p>
                             }
