@@ -17,8 +17,6 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
-# SECURE_SSL_REDIRECT = True
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_COOKIE_SECURE = True
@@ -35,7 +33,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 DEBUG = False
 
 ALLOWED_HOSTS = json.loads(os.environ.get('ALLOWED_HOSTS'))
@@ -160,7 +157,6 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [("redis://default:"+os.environ.get('REDIS_PASSWORD')+"@cache:6379")],
-            # "hosts": [("redis://default:"+os.environ.get('REDIS_PASSWORD')+"@localhost:6379")],
         },
     },
 }
