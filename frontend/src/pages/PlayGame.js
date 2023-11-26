@@ -364,7 +364,7 @@ const PlayGame = ()=> {
                 }
                 </div>
                 <form onSubmit={sendGuess} className='user-input'>
-                    <input type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} required/>
+                    <input autoFocus={true} onBlur={({ target }) => target.focus()} type="text" id="guess" placeholder="Type your guess here" value={guess} onChange={(e) => setGuess(e.target.value)} required/>
                 </form>
             </div>
         </div>

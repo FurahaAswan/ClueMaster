@@ -141,7 +141,7 @@ h1{
 }
 
 .player .name{
-    width: 150px;
+    width: 80%;
     overflow-wrap: normal;
 }
 
