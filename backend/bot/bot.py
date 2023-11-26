@@ -20,8 +20,9 @@ client = AsyncOpenAI()
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6) | stop_after_delay(10))
 async def query_bot(messages):
     completion = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-3.5-turbo-1106",
         messages= messages,
+        response_format={"type": "json_object"},
         temperature=1.2
     )
 
