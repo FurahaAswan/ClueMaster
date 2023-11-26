@@ -70,8 +70,7 @@ services:
       - ./letsencrypt:/etc/letsencrypt
     restart: unless-stopped
     ports:
-      - '80:80'
-      - '443:443'
+      - '82:80'
     depends_on:
       - frontend
       - backend
