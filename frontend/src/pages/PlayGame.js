@@ -261,7 +261,7 @@ const PlayGame = ()=> {
             <div className='header'>
                 <div className='left'>
                     <h1 className='timer'>{timer}</h1>
-                    <h1 className='round-number'>Round {roundNumber} or {rounds}</h1>
+                    <h1 className='round-number'>Round {roundNumber} of {rounds}</h1>
                 </div>
                 <div className='middle'>
                     <h1>{wordToGuess}</h1>
