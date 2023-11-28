@@ -11,9 +11,11 @@ from tenacity import (
     stop_after_delay
 ) 
 
-# dotenv_path = join(dirname(__file__), '.env')
-# load_dotenv(dotenv_path)
-# load_dotenv()
+##DEVELEPER ENV ONLY ====================
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+load_dotenv()
+#==========================================
 
 client = AsyncOpenAI()
 

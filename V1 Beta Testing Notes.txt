@@ -1,0 +1,18 @@
+- Add a way to 
+- Add support for other languages
+- Add a notification for clicking links
+- Room host not changing
+- Add a check for if you're close to the word
+- Round timer not updating
+- Joining games not working.
+- Not working in safari
+- Allow easy way to Join back rooms
+- Custom Avatars
+- Gameover scoreboard is backwards
+- Show when people get it right
+- Clue numbers not popping up correctly
+- Bug where after 1 game, if someone leaves or joins, host privlidges disappear 
+
+Additional Notes:
+ - I might scrap the cluemaster idea and instead just make a larger platform with multiple types of trivia.
+ - I'll definitely add the ability to join public rooms from a search area/ board with all public active games

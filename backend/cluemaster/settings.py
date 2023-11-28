@@ -16,6 +16,12 @@ from dotenv import load_dotenv
 
 from pathlib import Path
 
+##DEVELEPER ENV ONLY ====================
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+load_dotenv()
+#==========================================
+
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -30,11 +36,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = json.loads(os.environ.get('ALLOWED_HOSTS'))
 
 CORS_ALLOWED_ORIGINS = json.loads(os.environ.get('ALLOWED_ORIGINS'))
+
+#SECURITY WARNING: don't run with this turned on in production!
+CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -159,7 +169,8 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis://default:"+os.environ.get('REDIS_PASSWORD')+"@cache:6379")],
+            # "hosts": [("redis://default:"+os.environ.get('REDIS_PASSWORD')+"@cache:6379")],
+            "hosts": [("redis://localhost:6379")],
         },
     },
 }
