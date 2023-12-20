@@ -50,7 +50,7 @@ To run the game locally on your own machine, simply edit the .env file and updat
 ```
 docker compose up
 ```
-The application should then be running on port http://localhost:82
+The application should then be running on http://localhost:82
 
 ## Screenshots
 
