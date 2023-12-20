@@ -10,8 +10,7 @@ services:
     volumes:
       - static:/static
     env_file:
-      # - .env
-      - stack.env
+      - .env
     networks:
       - cluemaster
     depends_on:
