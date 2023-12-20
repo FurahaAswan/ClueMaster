@@ -51,5 +51,15 @@ To run the game locally on your own machine, simply edit the .env file and updat
 docker compose up
 ```
 The application should then be running on port http://localhost:82
+
+## Screenshots
+
+<img width="1247" alt="Screenshot 2023-12-20 at 5 25 41 PM" src="https://github.com/FurahaAswan/ClueMaster/assets/34450123/abe54b5f-b998-4713-8378-946b230ad122">
+<img width="1247" alt="Screenshot 2023-12-20 at 5 27 15 PM" src="https://github.com/FurahaAswan/ClueMaster/assets/34450123/71602440-50c7-481a-85db-346f1768fcf5">
+<img width="1247" alt="Screenshot 2023-12-20 at 5 27 42 PM" src="https://github.com/FurahaAswan/ClueMaster/assets/34450123/63ae5074-b083-43a6-8ed2-ca101f1c41d5">
+
+
+
+
   
 
