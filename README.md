@@ -1,6 +1,6 @@
 # ClueMaster - Multiplayer Online Guessing Game
 
-Welcome to ClueCascade, an exciting multiplayer online guessing game that challenges your creativity, wordplay, and quick thinking in a fun and competitive environment. Compete against other players to decipher words or phrases based on progressively more specific clues. 
+Welcome to ClueMaster, an exciting multiplayer online guessing game that challenges your creativity, wordplay, and quick thinking in a fun and competitive environment. Compete against other players to decipher words or phrases based on progressively more specific clues. 
 
 ## Game Concept
 
@@ -10,7 +10,7 @@ ClueMaster is a multiplayer online guessing game where players compete to guess 
 
 1. **Lobby Setup**
    - Players can create a game room or join existing ones.
-   - Each room has a set player limit, and the game starts when the room reaches capacity.
+   - Each room has custom settings to tweak the game to your liking.
 
 2. **Round Structure**
    - The game consists of multiple rounds.
@@ -43,3 +43,13 @@ ClueMaster is a multiplayer online guessing game where players compete to guess 
 
 4. **Leaderboards and Rankings**
    - Game Keeps track of player scores and displays a leaderboard to showcase the top performers.
+
+## Setup
+
+To run the game locally on your own machine, simply edit the .env file and update the variables. From there, download docker and docker compose, then run the command
+```
+docker compose up
+```
+The application should then be running on port http://localhost:82
+  
+
