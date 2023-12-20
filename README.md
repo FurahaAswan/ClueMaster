@@ -1,17 +1,10 @@
-# ClueCascade - Multiplayer Online Guessing Game
+# ClueMaster - Multiplayer Online Guessing Game
 
-Welcome to ClueCascade, an exciting multiplayer online guessing game that challenges your creativity, wordplay, and quick thinking in a fun and competitive environment. Compete against other players to decipher words or phrases based on progressively more specific clues. Get ready for a game that combines strategy, communication, and wit!
+Welcome to ClueCascade, an exciting multiplayer online guessing game that challenges your creativity, wordplay, and quick thinking in a fun and competitive environment. Compete against other players to decipher words or phrases based on progressively more specific clues. 
 
 ## Game Concept
 
-ClueCascade is a multiplayer online guessing game where players compete to guess a word or phrase based on progressively more specific clues. The game combines creativity, wordplay, and quick thinking in a fun and challenging environment. Similar to Skribbl, players compete against each other to guess something based on vague clues that become more specific over time.
-
-## Key Features
-
-- **Progressive Clues:** Clues start vague and gradually become more specific over time, challenging players to think on their feet.
-- **Timer Mechanic:** A countdown timer adds urgency, pushing players to make quick and accurate guesses.
-- **Communication:** Engage in text-based chat or opt for real-time voice chat for effective communication.
-- **Leaderboards and Rankings:** Track player scores and display leaderboards to highlight the top performers.
+ClueMaster is a multiplayer online guessing game where players compete to guess a word or phrase based on progressively more specific clues. The game combines creativity, wordplay, and quick thinking in a fun and challenging environment. Similar to Skribbl, players compete against each other to guess something based on vague clues that become more specific over time.
 
 ## Game Rules
 
@@ -46,20 +39,7 @@ ClueCascade is a multiplayer online guessing game where players compete to guess
    - A countdown timer adds a sense of urgency, encouraging quick thinking and decision-making.
 
 3. **Communication**
-   - Players can engage in text-based chat or use optional voice chat for real-time communication.
+   - Players can engage in text-based chat for real-time communication.
 
 4. **Leaderboards and Rankings**
-   - Keep track of player scores and display leaderboards to showcase the top performers.
-
-## Features
-
-1. **Customization Options**
-   - Allow players to personalize their avatars, in-game names, and room settings.
-
-2. **User Accounts and Progression**
-   - Implement player profiles with levels and achievements.
-   - Unlockable content and customization options as players progress.
-
-3. **Social Features**
-   - Friend system to connect with other players.
-   - In-game messaging for player interaction.
+   - Game Keeps track of player scores and displays a leaderboard to showcase the top performers.
