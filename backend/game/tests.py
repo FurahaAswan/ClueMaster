@@ -1,7 +1,6 @@
 from openai import OpenAI
 
-client = OpenAI(api_key="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")
-
+client = OpenAI("key")
 response = client.chat.completions.create(
   model="gpt-4-vision-preview",
   messages=[
