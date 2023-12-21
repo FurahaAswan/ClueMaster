@@ -44,7 +44,7 @@ ClueMaster is a multiplayer online guessing game where players compete to guess 
 4. **Leaderboards and Rankings**
    - Game Keeps track of player scores and displays a leaderboard to showcase the top performers.
   
-### Technical Aspects
+## Technical Aspects
 The project involves both front-end and back-end components to facilitate real-time multiplayer interactions. The React framework was used for the front-end, Django (Python) powered the back-end. Additionally, websockets was used for the real-time communication. I also incorporated use of OpenAi's ChatGPT API to allow players to get clues from any category. 
 
 ## Setup
