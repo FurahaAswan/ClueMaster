@@ -24,7 +24,6 @@ ClueMaster is a multiplayer online guessing game where players compete to guess 
 4. **Guessing Phase**
    - Players submit their guesses during the Clue-Giving Phase.
    - Correct guesses earn points for both the guessing player and the ClueMaster.
-   - Incorrect guesses result in point deductions.
 
 5. **Scoring**
    - Points are awarded based on the timing of correct guesses.
